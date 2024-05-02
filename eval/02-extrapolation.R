@@ -9,6 +9,8 @@ source("code/utils.R")
 
 evalMuchMissing.all = function(){
   
+  set.seed(42)
+  
   fns = c("bias","bass","herring")
   res.compl = do.call("rbind",lapply(fns,function(fn){
     

@@ -5,28 +5,10 @@ source("code/utils.R")
 
 require(ggplot2)
 
-# data = preprocData.simple(data)
-# 
-# encodeFunction=doTargetEncoding.TrainTest.vy.vr
-# traintestFunction=traintestXGB
-# years=2008
-# sds=c("24","25","26","28_2")
-# #run an imputation model
-# data.imp = computeIndex(data,c("24","25","26","28_2"),doTargetEncoding.TrainTest.vy.vr,traintestXGB)
-
-# 
-# data = loadData("bias")
-# data = preprocData.simple(data)
-# data.agewise=data
-# encodeFunction=doTargetEncoding.TrainTest.vy.vr
-# traintestFunction=traintestXGB
-# removeFrac = 0.5
-# skipyears=2016
-# 
-# sds = c("24","25","26","28_2")
-
 
 evalIndexStability.all = function(){
+  
+  set.seed(42)
   
   for(type in c("bias","bass","herring")){
     

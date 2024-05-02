@@ -4,6 +4,7 @@ require(dplyr)
 require(reshape2)
 require(rnaturalearth)
 require(viridis)
+require(ggplot2)
 
 doNoFilter = function(train,test) list(train,test)
 
@@ -34,11 +35,7 @@ loadData = function(type="bias"){
   
   
   spratl = melt(sprat,id.vars=c("Year","Sub_Div","RECT","Area"))
-  # spratl %>%
-  #   group_by(Year,RECT) %>%
-  #   summarise(all = sum(value)) -> sprat_all
-  # sprat_all = data.frame(sprat_all)
-  
+
   ices.sprat = merge(ices.b,spratl,by.x="ICESNAME",by.y="RECT")
   colnames(ices.sprat)[colnames(ices.sprat)=="ICESNAME"] = "RECT"
   ices.sprat = ices.sprat[,c("RECT","SOUTH","WEST","Year","Sub_Div","Area","variable","value")]
@@ -51,7 +48,8 @@ loadData = function(type="bias"){
 
 
 
-
+#some of the analyses and models cannot handle rectangles that appear only once in the dataset. 
+#This function removes them 
 preprocData.simple = function(data.agewise.pca,removeSingleRects=TRUE,removeRects = c("43G8","43G6","45G7","37G4","42G6","44G8","46G7","39G4")){
   
   if(removeSingleRects){
@@ -85,16 +83,14 @@ plotMap = function(data,year,age){
   dd = merge(ices.b,dd.coord,by.x="ICESNAME",by.y="RECT")
 
   p = ggplot(dd)+
-    geom_sf(aes(fill=value))+
+    geom_sf(aes(fill=value),color="transparent")+
     geom_sf(data = worldmap)+
     coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
     theme_light()+
-    scale_color_manual(values=c("white","red"))+
     scale_fill_viridis()+ #
     ggtitle(paste0(year,", ",age))+
     theme(axis.text.x = element_text(angle = 90))+
     labs(fill="abundance")
-  # theme(legend.position = "bottom")
   p
   
   
@@ -113,19 +109,20 @@ plotMap.imputed = function(data,year,age){
   ices.b = dplyr::filter(ices,Ecoregion=="Baltic Sea")
   dd = merge(ices.b,dd.coord,by.x="ICESNAME",by.y="RECT")
   
+  dd<- dd %>%
+    arrange(wasImp)
+  
   p = ggplot(dd)+
-    geom_sf(aes(fill=value,color=wasImp))+
+    geom_sf(aes(fill=value, color = wasImp), lwd = 0.75)+
     geom_sf(data = worldmap)+
     coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
     theme_light()+
-    scale_color_manual(values=c("white","red"))+
+    scale_color_manual(values=c("transparent","red"))+
     scale_fill_viridis()+ #
     ggtitle(paste0(year,", ",age))+
     theme(axis.text.x = element_text(angle = 90))+
     labs(fill="abundance")
-  # theme(legend.position = "bottom")
   p
-  
   
 }
 
@@ -141,7 +138,7 @@ doImputation = function(data,sds,encodeFunction,traintestFunction,years){
     summarise(Area = sum(Area)) -> sd.area
   
   ages=unique(data$variable)
-  bass.allrects.agewise = do.call("rbind",lapply(ages,function(a){
+  allrects.agewise = do.call("rbind",lapply(ages,function(a){
     
     sua = su
     sua$variable=a
@@ -151,11 +148,9 @@ doImputation = function(data,sds,encodeFunction,traintestFunction,years){
 
 
   all = do.call("rbind",lapply(years,function(y){
-    #print(y)
     
     datay = data[data$Year == y,]
-    #bass.allrects.agewise=data.frame(bass.allrects.agewise)
-    alldaty = merge(datay,bass.allrects.agewise,by.x=c("RECT","Sub_Div","variable","SOUTH","WEST","Area"),by.y=c("RECT","Sub_Div","variable","SOUTH","WEST","Area"),all.y=TRUE)
+    alldaty = merge(datay,allrects.agewise,by.x=c("RECT","Sub_Div","variable","SOUTH","WEST","Area"),by.y=c("RECT","Sub_Div","variable","SOUTH","WEST","Area"),all.y=TRUE)
     
     #for each of the SDs: merge with list of all rects in that sd. impute the missing ones
     toImp = alldaty[is.na(alldaty$value),]
@@ -166,7 +161,6 @@ doImputation = function(data,sds,encodeFunction,traintestFunction,years){
       dat.afterimp=notImp
       
     }else{
-
       toImp$Year = y
       # Feature encoding...
       tt = encodeFunction(data,toImp)
@@ -179,13 +173,11 @@ doImputation = function(data,sds,encodeFunction,traintestFunction,years){
       toImp$wasImp=TRUE
       
       dat.afterimp = rbind(notImp,toImp)
-      
     }
     
     dat.afterimp
     
   }))
-  
 }
 
 

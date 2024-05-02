@@ -126,6 +126,9 @@ traintestXGB = function(train,test,max.depth=2,nrounds=30){
 }
 
 #the different feature encodings for xgb
+#############################
+
+#encoding for XGB1
 doTargetEncoding.TrainTest.vy.vr = function(data.train,data.test,removeExtra=""){
   
   data.train$var.sd.year = paste0(data.train$variable,".",data.train$Year)
@@ -157,7 +160,7 @@ doTargetEncoding.TrainTest.vy.vr = function(data.train,data.test,removeExtra="")
   list(feats.train,feats.test)
 }
 
-
+#encoding for XGB1
 doTargetEncoding.TrainTest.vsy.vr = function(data.train,data.test,removeExtra=""){
   
   data.train$var.sd.year = paste0(data.train$variable,".",data.train$Sub_Div,".",data.train$Year)

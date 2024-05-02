@@ -8,6 +8,7 @@ require(ggplot2)
 
 doAllCV = function(){
   
+  set.seed(42)
   
   fns = c("bass","bias","herring")
   
