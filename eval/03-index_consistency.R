@@ -37,22 +37,22 @@ evalIndexStability.all = function(){
       #baseline
       stab.baseline = evalIndexStability(data,sds,doNoFilter,traintestBaseline,removeFrac,skipyears = skipyears)
       stab.baseline$removeFrac = removeFrac
-      stab.baseline$type = "baseline"
+      stab.baseline$type = "Baseline"
       
       #complex LMER
       stab.lmerComplex = evalIndexStability(data,sds,doNoFilter,traintestLMER1,removeFrac,skipyears = skipyears)
       stab.lmerComplex$removeFrac = removeFrac
       stab.lmerComplex$type = "LMM1"
       
-      #XGB
+      #XGB (the one with the rect interaction effect)
       stab.xgb = evalIndexStability(data,sds,doTargetEncoding.TrainTest.vy.vr,traintestXGB,removeFrac,skipyears = skipyears)
       stab.xgb$removeFrac = removeFrac
-      stab.xgb$type = "XGB1"
+      stab.xgb$type = "XGB2"
       
       #GAM
       stab.gam = evalIndexStability(data,sds,doNoFilter,trainTestGAM3,removeFrac,skipyears = skipyears)
       stab.gam$removeFrac = removeFrac
-      stab.gam$type = "GAM"
+      stab.gam$type = "GAM3"
       
       stab.all = rbind(stab.baseline,stab.lmerComplex,stab.xgb,stab.gam)
     }))
@@ -151,22 +151,24 @@ plotIndexStability = function(){
     
     p = ggplot(tp2)+
       geom_line(aes(x=removeFrac,y=r2m,color=type))+
-      geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
+      geom_point(aes(x=removeFrac,y=r2m,color=type))+
+      #geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="R2",color="Model")+
       theme_light()
     p
     
-    #ggsave(paste0("figures/index-r2-",type,".png"),p,width=6,height=4)
+    ggsave(paste0("figures/index/index-r2-",type,".png"),p,width=6,height=4)
     
     
     p = ggplot(tp2)+
       geom_line(aes(x=removeFrac,y=rmsem,color=type))+
-      geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
+      geom_point(aes(x=removeFrac,y=rmsem,color=type))+
+      #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="RMSE",color="Model")+
       theme_light()
     p
     
-    # ggsave(paste0("figures/index-rmse-",type,".png"),p,width=6,height=4)
+    ggsave(paste0("figures/index/index-rmse-",type,".png"),p,width=6,height=4)
     
     
   }
