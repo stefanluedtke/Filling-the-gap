@@ -5,6 +5,9 @@ source("code/utils.R")
 
 require(ggplot2)
 
+#assign colors to the different methods
+group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#252525")
+
 
 evalIndexStability.all = function(){
   
@@ -52,7 +55,7 @@ evalIndexStability.all = function(){
       #GAM
       stab.gam = evalIndexStability(data,sds,doNoFilter,trainTestGAM3,removeFrac,skipyears = skipyears)
       stab.gam$removeFrac = removeFrac
-      stab.gam$type = "GAM3"
+      stab.gam$type = "GAM2"
       
       stab.all = rbind(stab.baseline,stab.lmerComplex,stab.xgb,stab.gam)
     }))
@@ -68,6 +71,7 @@ plotIndexStability = function(){
   for(type in c("bass","bias","herring")){
     
     stab.all = read.csv(paste0("results/index_leaveOut_",type,".csv"))
+    stab.all$type[stab.all$type=="GAM3"]="GAM2"
     iterations = 10
     
     tpa = do.call("rbind",lapply(unique(stab.all$variable),function(v){
@@ -102,7 +106,8 @@ plotIndexStability = function(){
       geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
       facet_wrap(.~variable)+
       labs(x="p",y="R2",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     #ggsave(paste0("figures/index-agewise-r2-",type,".png"),p,width=6,height=4)
     
@@ -111,7 +116,8 @@ plotIndexStability = function(){
       geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
       facet_wrap(.~variable)+
       labs(x="p",y="R2",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     #ggsave(paste0("figures/index-agewise-rmse-",type,".png"),p,width=6,height=4)
@@ -154,7 +160,8 @@ plotIndexStability = function(){
       geom_point(aes(x=removeFrac,y=r2m,color=type))+
       #geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="R2",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/index/index-r2-",type,".png"),p,width=6,height=4)
@@ -165,7 +172,8 @@ plotIndexStability = function(){
       geom_point(aes(x=removeFrac,y=rmsem,color=type))+
       #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="RMSE",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/index/index-rmse-",type,".png"),p,width=6,height=4)

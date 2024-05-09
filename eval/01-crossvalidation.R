@@ -6,6 +6,10 @@ source("code/utils.R")
 require(data.table)
 require(ggplot2)
 
+#assign colors to the different methods
+group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#252525", GAM2.tweedie ="#a50f15")
+
+
 
 doCVGam1 = function(){
   
@@ -29,7 +33,7 @@ doCVGam1 = function(){
         
         print(paste("frac ",testfraction))
         
-        res.gam1 = doCV.RectPercent(data,trainTestGAM1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        res.gam1 = doCV.RectPercent(data,trainTestGAM1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.gam1$model="gam1"
         
         res = rbind(res.gam1)
@@ -123,6 +127,8 @@ plotCV.grouped = function(){
     
     
     res.complete = fread(paste0("results/imputation_cv_",fn,".csv"))
+    res.gam1 = fread(paste0("results/imputation_cv_gam1_",fn,".csv"))
+    res.complete = rbind(res.complete,res.gam1)
     tp = res.complete
     
     ##############################
@@ -132,8 +138,9 @@ plotCV.grouped = function(){
     
     #change model names for plotting
     tp$model[tp$model=="baseline"] = "Baseline"
-    tp$model[tp$model=="gam2"] = "GAM2"
-    tp$model[tp$model=="gam3"] = "GAM3"
+    tp$model[tp$model=="gam1"] = "GAM1"
+    #tp$model[tp$model=="gam2"] = "GAM2"
+    tp$model[tp$model=="gam3"] = "GAM2"
     tp$model[tp$model=="lmer1"] = "LMM1"
     tp$model[tp$model=="lmer2"] = "LMM2"
     tp$model[tp$model=="xgb1"] = "XGB1"
@@ -145,7 +152,7 @@ plotCV.grouped = function(){
     tp$mtype[tp$model %in% c("XGB1","XGB2")] = "XGB"
     
     tp$ftype = "sd"
-    tp$ftype[tp$model %in% c("GAM2","GAM3","LMM2","XGB1")] = "no_sd"
+    tp$ftype[tp$model %in% c("GAM1","GAM2","LMM2","XGB1")] = "no_sd"
     
     
     
@@ -180,7 +187,8 @@ plotCV.grouped = function(){
     # 
     # ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
     # 
-    # 
+
+    
     
     tp %>%
       dplyr::group_by(model,variable,testfraction,iteration,ftype,mtype) %>%
@@ -193,7 +201,8 @@ plotCV.grouped = function(){
       dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
                        rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
     #dplyr::summarise(r2m=mean(r2),rmsem=mean(rmse))-> tp2
-    
+
+
     
     p = ggplot(tp2)+
       geom_line(aes(x=testfraction,y=r2m,color=model,linetype=ftype,group=model))+
@@ -201,7 +210,8 @@ plotCV.grouped = function(){
       geom_point(aes(x=testfraction,y=r2m,color=model,group=model))+
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model",linetype="Features")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-r2-",fn,".png"),p,width=6,height=4)
@@ -213,7 +223,8 @@ plotCV.grouped = function(){
       #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
       theme(legend.position = "right")+
       labs(x="p",y="RMSE",color="Model",linetype="Features")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)
@@ -263,7 +274,8 @@ plotCV = function(){
       #geom_ribbon(aes(x=testfraction,ymin = r2l,ymax = r2u, fill = model), alpha = 0.1, show.legend = F)+
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/all-impute-agewise-r2-",fn,".png"),p,width=8,height=6)
@@ -274,7 +286,8 @@ plotCV = function(){
       facet_wrap(~variable,scales = "free_y")+
       theme(legend.position = "right")+
       labs(x="p",y="RMSE",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
@@ -294,13 +307,16 @@ plotCV = function(){
     #dplyr::summarise(r2m=mean(r2),rmsem=mean(rmse))-> tp2
     
     
+
+    
     p = ggplot(tp2)+
       geom_line(aes(x=testfraction,y=r2m,color=model))+
       #geom_ribbon(aes(x=testfraction,ymin = r2l,ymax = r2u, fill = model), alpha = 0.1, show.legend = F)+
       geom_point(aes(x=testfraction,y=r2m,color=model))+
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/all-impute-r2-",fn,".png"),p,width=6,height=4)
@@ -312,7 +328,8 @@ plotCV = function(){
       #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
       theme(legend.position = "right")+
       labs(x="p",y="RMSE",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/all-impute-rmse-",fn,".png"),p,width=6,height=4)
@@ -341,7 +358,8 @@ plotCV = function(){
       geom_point(aes(x=testfraction,y=r2m,color=model))+
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/best-impute-r2-",fn,".png"),p,width=6,height=4)
@@ -353,7 +371,8 @@ plotCV = function(){
       #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = model), alpha = 0.1, show.legend = F)+
       theme(legend.position = "right")+
       labs(x="p",y="RMSE",color="Model")+
-      theme_light()
+      theme_light()+
+      scale_color_manual(values=group.colors)
     p
     
     ggsave(paste0("figures/cv/best-impute-rmse-",fn,".png"),p,width=6,height=4)
@@ -430,6 +449,8 @@ plotTweedie = function(){
     dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
                      rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
   
+  tp2$model[tp2$model=="gam3"] = "GAM2"
+  tp2$model[tp2$model=="gam3.tweedie"] = "GAM2.tweedie"
   
   p = ggplot(tp2)+
     geom_line(aes(x=testfraction,y=r2m,color=model))+
@@ -437,10 +458,12 @@ plotTweedie = function(){
     geom_point(aes(x=testfraction,y=r2m,color=model))+
     theme(legend.position = "right")+
     labs(x="p",y="R2",color="Model")+
-    theme_light()
+    theme_light()+
+    scale_color_manual(values=group.colors)
+    
   p
   
-  ggsave(paste0("figures/cv/tweedie-impute-r2-",fn,".png"),p,width=6,height=4)
+  ggsave(paste0("figures/cv/tweedie-impute-r2-","bias",".png"),p,width=6,height=4)
   
   
   p = ggplot(tp2)+
@@ -449,10 +472,12 @@ plotTweedie = function(){
     #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
     theme(legend.position = "right")+
     labs(x="p",y="RMSE",color="Model")+
-    theme_light()
+    theme_light()+
+    scale_color_manual(values=group.colors)
+  
   p
   
-  ggsave(paste0("figures/cv/tweedie-impute-rmse-",fn,".png"),p,width=6,height=4)
+  ggsave(paste0("figures/cv/tweedie-impute-rmse-","bias",".png"),p,width=6,height=4)
   
   
   

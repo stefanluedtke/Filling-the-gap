@@ -4,6 +4,8 @@ source("code/models.R")
 source("code/utils.R")
 source("eval/02-extrapolation.R")
 
+group.colors <- c(GAM2 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#fb6a4a")
+
 
 plotExtrapolationExampleMap = function(){
   
@@ -33,7 +35,7 @@ plotExtrapolationExampleMap = function(){
   #data$wasImp = FALSE
 
   data$model = "Truth"
-  data2$model = "GAM3"
+  data2$model = "GAM2"
   data3$model = "LMM2"
   data4$model = "XGB1"
   data.imp = rbind(data,data2,data3,data4)
@@ -41,7 +43,7 @@ plotExtrapolationExampleMap = function(){
   data.imp$wasImp[data.imp$SOUTH<57.5] = TRUE
   data.imp$wasImp[data.imp$model == "Truth"] = FALSE
   
-  data.imp$model = factor(data.imp$model,levels=c("Truth","LMM2","XGB1","GAM3"))
+  data.imp$model = factor(data.imp$model,levels=c("Truth","LMM2","XGB1","GAM2"))
   
   
   worldmap <- ne_countries(scale = 'medium', type = 'map_units',
@@ -86,33 +88,36 @@ plotIndices = function(){
   
   data = loadData("bass") #load again because we use all data for training
   data.imp.gam = doImputation(data,c("24","25","26","28_2"),doNoFilter,trainTestGAM3,years=2001:2021)
-  data.imp.gam$model="gam"
+  data.imp.gam$model="GAM2"
   
   data.imp.baseline = doImputation(data,c("24","25","26","28_2"),doNoFilter,traintestBaseline,years=c(2001:2015,2017:2021))
-  data.imp.baseline$model="baseline"
+  data.imp.baseline$model="Baseline"
   
   data.imp.all = rbind(data.imp.gam,data.imp.baseline)
+  
   data.imp.all %>%
     group_by(Year,model) %>%
     summarise(index = sum(value)) -> ind      
-  ind = rbind(ind,data.frame(Year=2016,model="baseline",index=NA))
+  ind = rbind(ind,data.frame(Year=2016,model="Baseline",index=NA))
   
+  ind$model=factor(ind$model,levels=c("GAM2","Baseline"))
   
   p= ggplot(ind)+
-    geom_line(aes(x=Year,y=index,color=model))+
+    geom_line(aes(x=Year,y=index,color=model,linetype=model))+
     geom_point(aes(x=Year,y=index,color=model))+
     labs(x="year",y="abundance")+
-    theme_light()
+    theme_light()+
+    scale_color_manual(values=group.colors)
   p
   ggsave("figures/repaired_bass_both.png",p,width=6,height=4)
   
   
   data.imp.gam %>%
-    group_by(Year,variable) %>%
+    group_by(Year,variable,model) %>%
     summarise(index = sum(value)) -> ind.age   
   
   p = ggplot(ind.age)+
-    geom_point(aes(x=Year,y=variable,size=index))+ 
+    geom_point(aes(x=Year,y=variable,size=index),color="#08519c")+ 
     scale_size_area(max_size=10)+
     theme_light()+
     theme(axis.text.x = element_text(angle=90),legend.position = "none")+
@@ -162,6 +167,7 @@ plotIndexConsistencyExample = function(){
     geom_line(aes(x=Year,y=index,color=it))+
     #facet_grid(rows=vars(type),cols = vars(variable),scales = "free_y")
     ggh4x::facet_grid2(type~variable, scales = "free_y", independent = "y")+
+    theme_light()+
     theme(axis.text = element_blank(),axis.ticks=element_blank(),legend.position = "none")
   p
   
