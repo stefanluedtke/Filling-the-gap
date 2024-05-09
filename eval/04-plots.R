@@ -4,7 +4,7 @@ source("code/models.R")
 source("code/utils.R")
 source("eval/02-extrapolation.R")
 
-group.colors <- c(GAM2 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#fb6a4a")
+group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#fb6a4a")
 
 
 plotExtrapolationExampleMap = function(){
@@ -15,7 +15,7 @@ plotExtrapolationExampleMap = function(){
   age = "Age2"
   year= 2019
   
-  data.imp = evalMuchMissing(data,function(tr,te) trainTestGAM3(tr,te,k=15),testyear = year,featurefun = doNoFilter) 
+  data.imp = evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = year,featurefun = doNoFilter) 
   data2 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data2$value[!is.na(data2$pred)] = data2$pred[!is.na(data2$pred)]
   data2 = data2[,-c(9:10)]
@@ -87,7 +87,7 @@ plotIndices = function(){
   
   
   data = loadData("bass") #load again because we use all data for training
-  data.imp.gam = doImputation(data,c("24","25","26","28_2"),doNoFilter,trainTestGAM3,years=2001:2021)
+  data.imp.gam = doImputation(data,c("24","25","26","28_2"),doNoFilter,trainTestGAM2,years=2001:2021)
   data.imp.gam$model="GAM2"
   
   data.imp.baseline = doImputation(data,c("24","25","26","28_2"),doNoFilter,traintestBaseline,years=c(2001:2015,2017:2021))
@@ -139,7 +139,7 @@ plot2016 = function(){
   data = data[data$Sub_Div %in% sds,]
   
 
-  data.imp = doImputation(data,sds,doNoFilter,trainTestGAM3,years=2016)
+  data.imp = doImputation(data,sds,doNoFilter,trainTestGAM2,years=2016)
   
   p = plotMap.imputed(data.imp,2016,"Age2")
   
@@ -154,14 +154,11 @@ plotIndexConsistencyExample = function(){
   type="bias"
   stab.all = read.csv(paste0("results/index_leaveOut_",type,".csv"))
   
-  # stab = stab.all[stab.all$type %in% c("Baseline","GAM3") & stab.all$removeFrac == 0.75,]
   stab = stab.all[stab.all$removeFrac == 0.75,]
   
   stab %>%
     group_by(Year,it,removeFrac,type) %>%
     summarise(index=sum(index)) -> stab.m
-  
-  #stab.m = stab[stab$variable=="Age2",]
   
   p = ggplot(stab) +
     geom_line(aes(x=Year,y=index,color=it))+

@@ -36,13 +36,7 @@ evalMuchMissing.all = function(){
     }))
     res.xgb.vy.vr$model="xgb"
     
-    
-    # res.gam.m= do.call("rbind",lapply(years,function(y){
-    #   print(y)
-    #   evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = y,featurefun = doNoFilter) 
-    # }))
-    # res.gam.m$model="gam2"
-    
+
     res.lmm= do.call("rbind",lapply(years,function(y){
       print(y)
       evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = y,featurefun = doNoFilter)
@@ -51,9 +45,9 @@ evalMuchMissing.all = function(){
     
     res.gam.m.a = do.call("rbind",lapply(years,function(y){
       print(y)
-      evalMuchMissing(data,function(tr,te) trainTestGAM3(tr,te,k=15),testyear = y,featurefun = doNoFilter) 
+      evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = y,featurefun = doNoFilter) 
     }))
-    res.gam.m.a$model="gam3"
+    res.gam.m.a$model="gam2"
     
     
     

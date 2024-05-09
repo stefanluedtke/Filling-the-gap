@@ -53,7 +53,7 @@ evalIndexStability.all = function(){
       stab.xgb$type = "XGB2"
       
       #GAM
-      stab.gam = evalIndexStability(data,sds,doNoFilter,trainTestGAM3,removeFrac,skipyears = skipyears)
+      stab.gam = evalIndexStability(data,sds,doNoFilter,trainTestGAM2,removeFrac,skipyears = skipyears)
       stab.gam$removeFrac = removeFrac
       stab.gam$type = "GAM2"
       
@@ -71,7 +71,6 @@ plotIndexStability = function(){
   for(type in c("bass","bias","herring")){
     
     stab.all = read.csv(paste0("results/index_leaveOut_",type,".csv"))
-    stab.all$type[stab.all$type=="GAM3"]="GAM2"
     iterations = 10
     
     tpa = do.call("rbind",lapply(unique(stab.all$variable),function(v){
@@ -123,7 +122,6 @@ plotIndexStability = function(){
     #ggsave(paste0("figures/index-agewise-rmse-",type,".png"),p,width=6,height=4)
     
     
-    #tp2 = tpa %>% group_by(removeFrac,type) %>% summarise(rmse=mean(rmse),r2=mean(r2))
     tpa = do.call("rbind",lapply(unique(stab.all$variable),function(v){
       do.call("rbind",lapply(unique(stab.all$type),function(t){
         do.call("rbind",lapply(unique(stab.all$removeFrac),function(r){
@@ -158,7 +156,6 @@ plotIndexStability = function(){
     p = ggplot(tp2)+
       geom_line(aes(x=removeFrac,y=r2m,color=type))+
       geom_point(aes(x=removeFrac,y=r2m,color=type))+
-      #geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="R2",color="Model")+
       theme_light()+
       scale_color_manual(values=group.colors)
@@ -170,7 +167,6 @@ plotIndexStability = function(){
     p = ggplot(tp2)+
       geom_line(aes(x=removeFrac,y=rmsem,color=type))+
       geom_point(aes(x=removeFrac,y=rmsem,color=type))+
-      #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="RMSE",color="Model")+
       theme_light()+
       scale_color_manual(values=group.colors)
@@ -254,9 +250,6 @@ computeIndex.leaveOut = function(data.agewise,sds,encodeFunction,traintestFuncti
       
       keeprects = rects.sd[1:ntrain]
       tr = ty.sd[ty.sd$RECT %in% keeprects,]
-      #te = ty.sd[(ntrain+1):nrow(ty.sd),]
-      
-      #list(tr,te)
     }))
     
     train.all = rbind(thisyear.train,otheryears)

@@ -34,13 +34,13 @@ plotMap.imputed(data.imp2,2009,"Age2")
 
 
 #try the GAM imputation model instead and plot again
-data.imp2 = doImputation(data,sds,doNoFilter,trainTestGAM3,years=2009)
+data.imp2 = doImputation(data,sds,doNoFilter,trainTestGAM2,years=2009)
 plotMap.imputed(data.imp2,2009,"Age2")
 
 
 #compute index: do imputation for all years, then plot
 data = loadData("bass") #load again because we use all data for training
-data.imp.gam = doImputation(data,sds,doNoFilter,trainTestGAM3,years=2001:2021)
+data.imp.gam = doImputation(data,sds,doNoFilter,trainTestGAM2,years=2001:2021)
 data.imp.gam$model="gam"
 
 data.imp.baseline = doImputation(data,sds,doNoFilter,traintestBaseline,years=c(2001:2015,2017:2021))
