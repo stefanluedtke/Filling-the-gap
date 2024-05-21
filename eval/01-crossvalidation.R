@@ -145,12 +145,57 @@ plotCV.grouped = function(){
     tp$ftype[tp$model %in% c("GAM1","GAM2","LMM2","XGB1")] = "no_sd"
     
     
+    #scaling factor: need all truth data first
+    data = loadData(fn)
+    data = preprocData.simple(data)
+    #scale per age group
+    sa = data %>%
+      group_by(variable) %>% 
+      summarise(scale=sd(value))
+    tp = merge(tp,sa,by="variable")
+    
+
+    tp %>%
+      dplyr::group_by(model,variable,testfraction,iteration,mtype,ftype) %>%
+      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))/mean(scale)) %>%
+      ungroup() %>%
+      group_by(model,variable,testfraction,mtype,ftype) %>%
+      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
+                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=r2m,color=model,linetype=ftype,group=model))+
+      facet_wrap(~variable,scales="free_y")+
+      #geom_ribbon(aes(x=testfraction,ymin = r2l,ymax = r2u, fill = model), alpha = 0.1, show.legend = F)+
+      theme(legend.position = "right")+
+      labs(x="p",y="R2",color="Model",linetype="Features")+
+      theme_light()+      
+      scale_color_manual(values=group.colors)
+    
+    p
+    
+    ggsave(paste0("figures/cv/all-impute-agewise-r2-",fn,".png"),p,width=8,height=6)
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+      #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
+      facet_wrap(~variable,scales = "free_y")+ #
+      theme(legend.position = "right")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)
+    
+    p
+    
+    ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
+    
+    
     tp %>%
       dplyr::group_by(model,variable,testfraction,iteration,ftype,mtype) %>%
-      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))) %>%
+      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2)),scale=mean(scale)) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(model,testfraction,iteration,ftype,mtype) %>%
-      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)) %>%
+      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)/mean(scale)) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(model,testfraction,ftype,mtype) %>%
       dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
@@ -173,7 +218,7 @@ plotCV.grouped = function(){
       geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
       geom_point(aes(x=testfraction,y=rmsem,color=model,group=model))+
       theme(legend.position = "right")+
-      labs(x="p",y="RMSE",color="Model",linetype="Features")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
       theme_light()+
       scale_color_manual(values=group.colors)
     p
@@ -192,139 +237,6 @@ plotCV.grouped = function(){
 
 
 
-plotCV = function(){
-  
-  for(fn in c("bass","bias","herring")){
-    
-    
-    res.complete = fread(paste0("results/imputation_cv_",fn,".csv"))
-    tp = res.complete
-    
-    #change model names for plotting
-    tp$model[tp$model=="baseline"] = "Baseline"
-    tp$model[tp$model=="gam1"] = "GAM1"
-    tp$model[tp$model=="gam2"] = "GAM2"
-    tp$model[tp$model=="lmer1"] = "LMM1"
-    tp$model[tp$model=="lmer2"] = "LMM2"
-    tp$model[tp$model=="xgb1"] = "XGB1"
-    tp$model[tp$model=="xgb2"] = "XGB2"
-    
-    
-    tp %>%
-      dplyr::group_by(model,variable,testfraction,iteration) %>%
-      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))) %>%
-      ungroup() %>%
-      group_by(model,variable,testfraction) %>%
-      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
-                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
-
-    p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=r2m,color=model))+
-      facet_wrap(~variable,scales = "free_y")+
-      theme(legend.position = "right")+
-      labs(x="p",y="R2",color="Model")+
-      theme_light()+
-      scale_color_manual(values=group.colors)
-    p
-    
-    ggsave(paste0("figures/cv/all-impute-agewise-r2-",fn,".png"),p,width=8,height=6)
-    
-    p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=rmsem,color=model))+
-      facet_wrap(~variable,scales = "free_y")+
-      theme(legend.position = "right")+
-      labs(x="p",y="RMSE",color="Model")+
-      theme_light()+
-      scale_color_manual(values=group.colors)
-    p
-    
-    ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
-    
-    
-    
-    tp %>%
-      dplyr::group_by(model,variable,testfraction,iteration) %>%
-      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))) %>%
-      dplyr::ungroup() %>%
-      dplyr::group_by(model,testfraction,iteration) %>%
-      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)) %>%
-      dplyr::ungroup() %>%
-      dplyr::group_by(model,testfraction) %>%
-      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
-                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
-
-    
-
-    
-    p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=r2m,color=model))+
-      geom_point(aes(x=testfraction,y=r2m,color=model))+
-      theme(legend.position = "right")+
-      labs(x="p",y="R2",color="Model")+
-      theme_light()+
-      scale_color_manual(values=group.colors)
-    p
-    
-    ggsave(paste0("figures/cv/all-impute-r2-",fn,".png"),p,width=6,height=4)
-    
-    
-    p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=rmsem,color=model))+
-      geom_point(aes(x=testfraction,y=rmsem,color=model))+
-      theme(legend.position = "right")+
-      labs(x="p",y="RMSE",color="Model")+
-      theme_light()+
-      scale_color_manual(values=group.colors)
-    p
-    
-    ggsave(paste0("figures/cv/all-impute-rmse-",fn,".png"),p,width=6,height=4)
-    
-    
-    
-    #just select the best and plot again
-    tp = tp[tp$model %in% c("Baseline","LMM1","XGB2","GAM2"),]
-    
-    tp %>%
-      dplyr::group_by(model,variable,testfraction,iteration) %>%
-      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))) %>%
-      dplyr::ungroup() %>%
-      dplyr::group_by(model,testfraction,iteration) %>%
-      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)) %>%
-      dplyr::ungroup() %>%
-      dplyr::group_by(model,testfraction) %>%
-      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
-                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
-
-    
-    p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=r2m,color=model))+
-      geom_point(aes(x=testfraction,y=r2m,color=model))+
-      theme(legend.position = "right")+
-      labs(x="p",y="R2",color="Model")+
-      theme_light()+
-      scale_color_manual(values=group.colors)
-    p
-    
-    ggsave(paste0("figures/cv/best-impute-r2-",fn,".png"),p,width=6,height=4)
-    
-    
-    p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=rmsem,color=model))+
-      geom_point(aes(x=testfraction,y=rmsem,color=model))+
-      theme(legend.position = "right")+
-      labs(x="p",y="RMSE",color="Model")+
-      theme_light()+
-      scale_color_manual(values=group.colors)
-    p
-    
-    ggsave(paste0("figures/cv/best-impute-rmse-",fn,".png"),p,width=6,height=4)
-    
-    
-    
-  }
-  
-  
-}
 
 
 
@@ -380,12 +292,22 @@ plotTweedie = function(){
   
   res = fread("results/imputation_cv_tweedie_bias.csv")
   
+  
+  #scaling factor: need all truth data first
+  data = loadData("bias")
+  data = preprocData.simple(data)
+  #scale per age group
+  sa = data %>%
+    group_by(variable) %>% 
+    summarise(scale=sd(value))
+  res = merge(res,sa,by="variable")
+  
   res %>%
     dplyr::group_by(model,variable,testfraction,iteration) %>%
-    dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))) %>%
+    dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2)),scale=mean(scale)) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(model,testfraction,iteration) %>%
-    dplyr::summarise(r2=mean(r2),rmse=mean(rmse)) %>%
+    dplyr::summarise(r2=mean(r2),rmse=mean(rmse)/mean(scale)) %>%
     dplyr::ungroup() %>%
     dplyr::group_by(model,testfraction) %>%
     dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
@@ -411,7 +333,7 @@ plotTweedie = function(){
     geom_line(aes(x=testfraction,y=rmsem,color=model))+
     geom_point(aes(x=testfraction,y=rmsem,color=model))+
     theme(legend.position = "right")+
-    labs(x="p",y="RMSE",color="Model")+
+    labs(x="p",y="NRMSE",color="Model")+
     theme_light()+
     scale_color_manual(values=group.colors)
   

@@ -76,12 +76,28 @@ summarizeResults = function(){
   
   res.compl=fread("results/extrapolation.csv")
   
+  fns = c("bass","bias","herring")
+  #scaling factor: need all truth data first
+  sa = do.call("rbind",lapply(fns,function(fn){
+    data = loadData(fn)
+    data = preprocData.simple(data)
+    data$type=fn
+    
+    sa = data %>%
+      group_by(variable,type) %>% 
+      summarise(scale=sd(value))
+    sa
+  }))
+  
+  res.compl = merge(res,sa,by=c("variable","type"))
+  
+  
   res.compl %>%
     group_by(model,type,variable) %>%
-    summarise(rmse=sqrt(mean((pred-truth)^2)),r2=cor(pred,truth)^2) %>%
+    summarise(rmse=sqrt(mean((pred-truth)^2)),r2=cor(pred,truth)^2,scale=mean(scale)) %>%
     ungroup %>%
     group_by(model,type) %>%
-    summarise(rmse=mean(rmse),r2=mean(r2))-> tp
+    summarise(rmse=mean(rmse)/mean(scale),r2=mean(r2))-> tp
   tp
   
   

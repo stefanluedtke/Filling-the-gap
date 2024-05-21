@@ -66,12 +66,18 @@ evalIndexStability.all = function(){
   
 }
 
+
+
 plotIndexStability = function(){
   
   for(type in c("bass","bias","herring")){
     
     stab.all = read.csv(paste0("results/index_leaveOut_",type,".csv"))
+    stab.all$type[stab.all$type=="GAM3"]="GAM2"
     iterations = 10
+    
+    
+    #scale: sd of true index of that age group
     
     tpa = do.call("rbind",lapply(unique(stab.all$variable),function(v){
       do.call("rbind",lapply(unique(stab.all$type),function(t){
@@ -91,14 +97,12 @@ plotIndexStability = function(){
             cor(ii$index,index.baseline$index)^2
           }))
           data.frame(variable=v,type=t,removeFrac=r,
-                     rmsem=mean(rmses),rmsel=t.test(rmses)$conf.int[1],rmseu=t.test(rmses)$conf.int[2],
+                     rmsem=mean(rmses)/sd(index.baseline$index),rmsel=t.test(rmses)$conf.int[1],rmseu=t.test(rmses)$conf.int[2],
                      r2m=mean(r2s),r2l=t.test(r2s)$conf.int[1],r2u=t.test(r2s)$conf.int[2])
         }))
       }))
     }))
     
-    
-    #require(ggh4x)
     
     p = ggplot(tpa)+
       geom_line(aes(x=removeFrac,y=r2m,color=type))+
@@ -108,20 +112,18 @@ plotIndexStability = function(){
       theme_light()+
       scale_color_manual(values=group.colors)
     p
-    #ggsave(paste0("figures/index-agewise-r2-",type,".png"),p,width=6,height=4)
     
     p = ggplot(tpa)+
       geom_line(aes(x=removeFrac,y=rmsem,color=type))+
-      geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
+      #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
       facet_wrap(.~variable)+
-      labs(x="p",y="R2",color="Model")+
+      labs(x="p",y="RMSE",color="Model")+
       theme_light()+
       scale_color_manual(values=group.colors)
     p
     
-    #ggsave(paste0("figures/index-agewise-rmse-",type,".png"),p,width=6,height=4)
     
-    
+    #tp2 = tpa %>% group_by(removeFrac,type) %>% summarise(rmse=mean(rmse),r2=mean(r2))
     tpa = do.call("rbind",lapply(unique(stab.all$variable),function(v){
       do.call("rbind",lapply(unique(stab.all$type),function(t){
         do.call("rbind",lapply(unique(stab.all$removeFrac),function(r){
@@ -139,7 +141,7 @@ plotIndexStability = function(){
             ii = ii[order(ii$variable,ii$Year),]
             cor(ii$index,index.baseline$index)^2
           }))
-          data.frame(variable=v,type=t,removeFrac=r,
+          data.frame(variable=v,type=t,removeFrac=r,scale=sd(index.baseline$index),
                      rmses=rmses,
                      r2s=r2s,it=1:10)
         }))
@@ -147,7 +149,7 @@ plotIndexStability = function(){
     }))
     #now mean over all ages, then mean and conf int again
     tpa %>% group_by(removeFrac,type,it) %>% 
-      summarise(rmse=mean(rmses),r2=mean(r2s)) %>%
+      summarise(rmse=mean(rmses)/mean(scale),r2=mean(r2s)) %>%
       ungroup() %>%
       group_by(removeFrac,type) %>%
       summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
@@ -156,6 +158,7 @@ plotIndexStability = function(){
     p = ggplot(tp2)+
       geom_line(aes(x=removeFrac,y=r2m,color=type))+
       geom_point(aes(x=removeFrac,y=r2m,color=type))+
+      #geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="R2",color="Model")+
       theme_light()+
       scale_color_manual(values=group.colors)
@@ -167,7 +170,8 @@ plotIndexStability = function(){
     p = ggplot(tp2)+
       geom_line(aes(x=removeFrac,y=rmsem,color=type))+
       geom_point(aes(x=removeFrac,y=rmsem,color=type))+
-      labs(x="p",y="RMSE",color="Model")+
+      #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
+      labs(x="p",y="NRMSE",color="Model")+
       theme_light()+
       scale_color_manual(values=group.colors)
     p
