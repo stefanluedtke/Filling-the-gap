@@ -7,3 +7,6 @@ They are conducted biannually in May (Baltic Acoustic Spring Survey (BASS) resul
 modelling approaches: Linear mixed-effects models (LMMs), Gradient Boosted Trees (XGBoost) and Generalized 
 Additive Models (GAMs) alongside the baseline approach. 
 
+## Running the scripts
+
+The script example.R shows how to use the code to load data, plot it and run imputation models. The analyses in the paper can be reproduced with the scripts in the folder eval. 
