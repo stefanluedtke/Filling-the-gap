@@ -11,50 +11,6 @@ group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "
 
 
 
-doCVGam1 = function(){
-  
-  set.seed(42)
-  
-  fns = c("bass","bias","herring")
-  
-  for(fn in fns){
-    
-    data = loadData(fn)
-    data = preprocData.simple(data)
-    
-    res.complete = do.call("rbind",lapply(1:10,function(it){
-      
-      shuffle = sample(nrow(data),nrow(data),replace = F)
-      data = data[shuffle,]
-      
-      print(paste("iteration",it))
-      
-      res.complete = do.call("rbind",lapply(c(0.1,0.25,0.5,0.75,0.99),function(testfraction){ #
-        
-        print(paste("frac ",testfraction))
-        
-        res.gam1 = doCV.RectPercent(data,trainTestGAM1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.gam1$model="gam1"
-        
-        res = rbind(res.gam1)
-        
-        res$testfraction = testfraction
-        res$iteration=it
-        
-        res
-        
-      }))
-    }))
-    
-    write.table(res.complete,
-                paste0("results/imputation_cv_gam1_",fn,".csv"),
-                sep=",",col.names = TRUE,row.names = FALSE)
-    
-  }
-  
-}
-
-
 doAllCV = function(){
   
   set.seed(42)
@@ -230,13 +186,6 @@ plotCV.grouped = function(){
   }
   
 }
-
-
-
-
-
-
-
 
 
 
