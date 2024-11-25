@@ -1,4 +1,4 @@
-setwd("~/projects/OTC_Thuenen/SpratSurvey-SL/code/toPublish/")
+setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
 
 source("code/models.R")
 source("code/utils.R")
@@ -22,6 +22,16 @@ doAllCV = function(){
     data = loadData(fn)
     data = preprocData.simple(data)
     
+    ###############
+    # project coordinates to local grid
+    sf_wgs84 <- st_as_sf(data, coords = c("SOUTH","WEST"), crs = 4326) 
+    sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+    #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+    coords <- st_coordinates(sf_etrs89_projected)
+    data$WEST = coords[,1]
+    data$SOUTH = coords[,2]
+    ##############
+    
     res.complete = do.call("rbind",lapply(1:10,function(it){
       
       shuffle = sample(nrow(data),nrow(data),replace = F)
@@ -34,25 +44,25 @@ doAllCV = function(){
         print(paste("frac ",testfraction))
         
         res.baseline = doCV.RectPercent(data,traintestBaseline,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.baseline$model="baseline"
+        res.baseline$model="Baseline"
         
         res.lmer1 = doCV.RectPercent(data,traintestLMER1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.lmer1$model="lmer1"
+        res.lmer1$model="LMM-SDEffect"
 
         res.lmer2 = doCV.RectPercent(data,traintestLMER2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.lmer2$model="lmer2"
+        res.lmer2$model="LMM-noSDEffect"
 
         res.gam1 = doCV.RectPercent(data,trainTestGAM1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.gam1$model="gam1"
+        res.gam1$model="GAM-noM"
 
         res.gam2 = doCV.RectPercent(data,trainTestGAM2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.gam2$model="gam2"
+        res.gam2$model="GAM-M"
 
         res.xgb1 = doCV.RectPercent(data,traintestXGB,doTargetEncoding.TrainTest.vy.vr,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.xgb1$model="xgb1"
+        res.xgb1$model="XGB-noSDInteraction"
         
         res.xgb2 = doCV.RectPercent(data,traintestXGB,doTargetEncoding.TrainTest.vsy.vr,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.xgb2$model="xgb2"
+        res.xgb2$model="XGB-SDInteraction"
         
         #todo other models
         res = rbind(res.baseline,res.lmer1,res.lmer2,res.gam2,res.gam2,res.xgb1,res.xgb2)

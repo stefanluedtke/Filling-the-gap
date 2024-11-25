@@ -37,7 +37,8 @@ trainTestGAM1 = function(train,test,k=15){
     dat = train[train$variable == yvi,]
     te = test[test$variable == yvi,]
     
-    gmod = gam(value ~ s(SOUTH,WEST,k=k,by=Area),data=dat,method="REML")
+    #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=Area),data=dat,method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) ,data=dat,family=tw(link="log"),method="REML")
     pred = predict(gmod,te,type="response")
     test$pred[test$variable==yvi] <<- pred
     NA
@@ -66,7 +67,8 @@ trainTestGAM2 = function(train,test,k=15){
     dat = train[train$variable == yvi,]
     te = test[test$variable == yvi,]
     
-    gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
+    #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) + log(mobs),data=dat,family=tw(link="log"),method="REML")
     pred = predict(gmod,te,type="response")
     test$pred[test$variable==yvi] <<- pred
     NA
@@ -76,7 +78,7 @@ trainTestGAM2 = function(train,test,k=15){
   
 }
 
-trainTestGAM2.tweedie = function(train,test,k=15){
+trainTestGAM2.gaussian = function(train,test,k=15){
   
   #group test samples by variable
   uyv = unique(test$variable)
@@ -94,8 +96,8 @@ trainTestGAM2.tweedie = function(train,test,k=15){
     dat = train[train$variable == yvi,]
     te = test[test$variable == yvi,]
     
-    #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
-    gmod = gam(value ~ s(SOUTH,WEST,k=k,bs="gp") + mobs + Area,data=dat,family=tw(link="log"),method="REML")
+    # gmod = gam(value ~ s(SOUTH,WEST,k=k,bs="gp") + mobs + Area,data=dat,family=tw(link="log"),method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
     pred = predict(gmod,te,type="response")
     test$pred[test$variable==yvi] <<- pred
     NA
