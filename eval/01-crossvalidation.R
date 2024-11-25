@@ -1,7 +1,7 @@
-setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
+setwd("~/projects/OTC_Thuenen/SpratSurvey-SL/code/toPublish/")
 
-source("code/models.R")
-source("code/utils.R")
+source("~/projects/OTC_Thuenen/Filling-the-gap/code/models.R")
+source("~/projects/OTC_Thuenen/Filling-the-gap/code/utils.R")
 
 require(data.table)
 require(ggplot2)
