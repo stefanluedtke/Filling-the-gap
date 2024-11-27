@@ -1,7 +1,7 @@
-setwd("~/projects/OTC_Thuenen/SpratSurvey-SL/code/toPublish/")
+setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
 
-source("~/projects/OTC_Thuenen/Filling-the-gap/code/models.R")
-source("~/projects/OTC_Thuenen/Filling-the-gap/code/utils.R")
+source("code/models.R")
+source("code/utils.R")
 
 require(data.table)
 require(ggplot2)
@@ -24,7 +24,7 @@ doAllCV = function(){
     
     ###############
     # project coordinates to local grid
-    sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order of lat,lon
+    sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
     sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
     #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
     coords <- st_coordinates(sf_etrs89_projected)
@@ -93,16 +93,6 @@ plotCV.grouped = function(){
     res.complete = fread(paste0("results/imputation_cv_",fn,".csv"))
     tp = res.complete
     
-    
-    #change model names for plotting
-    # tp$model[tp$model=="baseline"] = "Baseline"
-    # tp$model[tp$model=="gam1"] = "GAM1"
-    # tp$model[tp$model=="gam2"] = "GAM2"
-    # tp$model[tp$model=="lmer1"] = "LMM1"
-    # tp$model[tp$model=="lmer2"] = "LMM2"
-    # tp$model[tp$model=="xgb1"] = "XGB1"
-    # tp$model[tp$model=="xgb2"] = "XGB2"
-    
     tp$mtype = "Baseline"
     tp$mtype[tp$model %in% c("GAM-noM","GAM-M")] = "GAM"
     tp$mtype[tp$model %in% c("LMM-SDEffect","LMM-noSDEffect")] = "LMM"
@@ -159,13 +149,13 @@ plotCV.grouped = function(){
     
     tp %>%
       dplyr::group_by(model,variable,testfraction,iteration,ftype,mtype) %>%
-      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2)),scale=mean(scale)) %>%
+      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2)),scale=mean(scale),mae=mean(abs(pred-truth))) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(model,testfraction,iteration,ftype,mtype) %>%
-      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)/mean(scale)) %>%
+      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)/mean(scale),mae=mean(mae)/mean(scale)) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(model,testfraction,ftype,mtype) %>%
-      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
+      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],mae=mean(mae),
                        rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
     
     
@@ -191,6 +181,18 @@ plotCV.grouped = function(){
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=mae,color=model,linetype=ftype,group=model))+
+      geom_point(aes(x=testfraction,y=mae,color=model,group=model))+
+      #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
+      theme(legend.position = "right")+
+      labs(x="p",y="NMAE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)
+    p
+    
+    ggsave(paste0("figures/cv/all-impute-grouped-mae-",fn,".png"),p,width=6,height=4)
     
     
     

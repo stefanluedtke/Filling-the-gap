@@ -1,4 +1,4 @@
-setwd("~/projects/OTC_Thuenen/SpratSurvey-SL/code/toPublish/")
+setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
 
 source("code/models.R")
 source("code/utils.R")
@@ -19,6 +19,17 @@ evalMuchMissing.all = function(){
     data = loadData(fn)
     data = preprocData.simple(data)
     
+    ###############
+    # project coordinates to local grid
+    sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+    sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+    #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+    coords <- st_coordinates(sf_etrs89_projected)
+    orig.south=data$SOUTH
+    data$WEST = coords[,1]
+    data$SOUTH = coords[,2]
+    ##############
+    
     years = unique(data$Year)
     
   
@@ -32,22 +43,22 @@ evalMuchMissing.all = function(){
     en = function(tr,te) doTargetEncoding.TrainTest.vy.vr(tr,te)
     res.xgb.vy.vr = do.call("rbind",lapply(years,function(y){
       print(y)
-      evalMuchMissing(data,xx,testyear = y,featurefun = en)
+      evalMuchMissing(data,xx,testyear = y,featurefun = en,orig.south=orig.south)
     }))
-    res.xgb.vy.vr$model="xgb"
+    res.xgb.vy.vr$model="XGB-noSDInteraction"
     
 
     res.lmm= do.call("rbind",lapply(years,function(y){
       print(y)
-      evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = y,featurefun = doNoFilter)
+      evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = y,featurefun = doNoFilter,orig.south=orig.south)
     }))
-    res.lmm$model="lmm2"
+    res.lmm$model="LMM-noSDEffect"
     
     res.gam.m.a = do.call("rbind",lapply(years,function(y){
       print(y)
-      evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = y,featurefun = doNoFilter) 
+      evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = y,featurefun = doNoFilter,orig.south=orig.south) 
     }))
-    res.gam.m.a$model="gam2"
+    res.gam.m.a$model="GAM-M"
     
     
     
@@ -89,7 +100,7 @@ summarizeResults = function(){
     sa
   }))
   
-  res.compl = merge(res,sa,by=c("variable","type"))
+  res.compl = merge(res.compl,sa,by=c("variable","type"))
   
   
   res.compl %>%
@@ -128,11 +139,11 @@ summarizeResults = function(){
 ##################
 #helper functions
 
-evalMuchMissing = function(data.agewise.coord,traintestfun,testyear=2020,featurefun=doNoFilter){
+evalMuchMissing = function(data.agewise.coord,traintestfun,testyear=2020,featurefun=doNoFilter,orig.south=NA){
   
 
-  train = data.agewise.coord[!(data.agewise.coord$Year == testyear & data.agewise.coord$SOUTH < 57.5),]
-  test = data.agewise.coord[(data.agewise.coord$Year == testyear & data.agewise.coord$SOUTH < 57.5),]
+  train = data.agewise.coord[!(data.agewise.coord$Year == testyear & orig.south < 57.5),]
+  test = data.agewise.coord[(data.agewise.coord$Year == testyear & orig.south < 57.5),]
   
   tt = featurefun(train,test)
   train.enc = tt[[1]]

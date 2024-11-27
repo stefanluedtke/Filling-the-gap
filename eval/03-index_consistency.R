@@ -1,4 +1,4 @@
-setwd("~/projects/OTC_Thuenen/SpratSurvey-SL/code/toPublish/")
+setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
 
 source("code/models.R")
 source("code/utils.R")
@@ -6,7 +6,9 @@ source("code/utils.R")
 require(ggplot2)
 
 #assign colors to the different methods
-group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#252525")
+group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
+                  "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
+                  "Baseline" = "#252525")
 
 
 evalIndexStability.all = function(){
@@ -17,6 +19,16 @@ evalIndexStability.all = function(){
     
     data = loadData(type)
     data = preprocData.simple(data)
+    
+    ###############
+    # project coordinates to local grid
+    sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+    sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+    #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+    coords <- st_coordinates(sf_etrs89_projected)
+    data$WEST = coords[,1]
+    data$SOUTH = coords[,2]
+    ##############
     
     if(type=="bias"){
       sds = c("22","23","24","25","26","27","28_2","29","32")
@@ -45,17 +57,17 @@ evalIndexStability.all = function(){
       #complex LMER
       stab.lmerComplex = evalIndexStability(data,sds,doNoFilter,traintestLMER1,removeFrac,skipyears = skipyears)
       stab.lmerComplex$removeFrac = removeFrac
-      stab.lmerComplex$type = "LMM1"
+      stab.lmerComplex$type = "LMM-SDEffect"
       
       #XGB (the one with the rect interaction effect)
       stab.xgb = evalIndexStability(data,sds,doTargetEncoding.TrainTest.vy.vr,traintestXGB,removeFrac,skipyears = skipyears)
       stab.xgb$removeFrac = removeFrac
-      stab.xgb$type = "XGB2"
+      stab.xgb$type = "XGB-SDInteraction"
       
       #GAM
       stab.gam = evalIndexStability(data,sds,doNoFilter,trainTestGAM2,removeFrac,skipyears = skipyears)
       stab.gam$removeFrac = removeFrac
-      stab.gam$type = "GAM2"
+      stab.gam$type = "GAM-M"
       
       stab.all = rbind(stab.baseline,stab.lmerComplex,stab.xgb,stab.gam)
     }))
@@ -73,7 +85,6 @@ plotIndexStability = function(){
   for(type in c("bass","bias","herring")){
     
     stab.all = read.csv(paste0("results/index_leaveOut_",type,".csv"))
-    stab.all$type[stab.all$type=="GAM3"]="GAM2"
     iterations = 10
     
     

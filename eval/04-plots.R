@@ -1,10 +1,12 @@
-setwd("~/projects/OTC_Thuenen/SpratSurvey-SL/code/toPublish/")
+setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
 
 source("code/models.R")
 source("code/utils.R")
 source("eval/02-extrapolation.R")
 
-group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#fb6a4a")
+group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
+                  "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
+                  "Baseline" = "#252525")
 
 
 plotExtrapolationExampleMap = function(){
@@ -15,19 +17,33 @@ plotExtrapolationExampleMap = function(){
   age = "Age2"
   year= 2019
   
-  data.imp = evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = year,featurefun = doNoFilter) 
+  ###############
+  # project coordinates to local grid
+  sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+  sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+  #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+  coords <- st_coordinates(sf_etrs89_projected)
+  orig.south=data$SOUTH
+  data$WEST = coords[,1]
+  data$SOUTH = coords[,2]
+  ##############
+  
+  data.imp = evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = year,
+                             featurefun = doNoFilter,orig.south = orig.south) 
   data2 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data2$value[!is.na(data2$pred)] = data2$pred[!is.na(data2$pred)]
   data2 = data2[,-c(9:10)]
   
   
-  data.imp = evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = year,featurefun = doNoFilter) 
+  data.imp = evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = year,featurefun = doNoFilter,
+                             orig.south = orig.south) 
   data3 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data3$value[!is.na(data3$pred)] = data3$pred[!is.na(data3$pred)]
   data3 = data3[,-c(9:10)]
   
   
-  data.imp = evalMuchMissing(data,function(tr,te) traintestXGB(tr,te),testyear = year,featurefun = doTargetEncoding.TrainTest.vy.vr) 
+  data.imp = evalMuchMissing(data,function(tr,te) traintestXGB(tr,te),testyear = year,
+                             featurefun = doTargetEncoding.TrainTest.vy.vr,orig.south = orig.south) 
   data4 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data4$value[!is.na(data4$pred)] = data4$pred[!is.na(data4$pred)]
   data4 = data4[,-c(9:10)]
@@ -35,15 +51,15 @@ plotExtrapolationExampleMap = function(){
   #data$wasImp = FALSE
 
   data$model = "Truth"
-  data2$model = "GAM2"
-  data3$model = "LMM2"
-  data4$model = "XGB1"
+  data2$model = "GAM-M"
+  data3$model = "LMM-noSDEffect"
+  data4$model = "XGB-noSDInteraction"
   data.imp = rbind(data,data2,data3,data4)
   data.imp$wasImp = FALSE
   data.imp$wasImp[data.imp$SOUTH<57.5] = TRUE
   data.imp$wasImp[data.imp$model == "Truth"] = FALSE
   
-  data.imp$model = factor(data.imp$model,levels=c("Truth","LMM2","XGB1","GAM2"))
+  data.imp$model = factor(data.imp$model,levels=c("Truth","LMM-noSDEffect","XGB-noSDInteraction","GAM-M"))
   
   
   worldmap <- ne_countries(scale = 'medium', type = 'map_units',
@@ -86,9 +102,22 @@ plotExtrapolationExampleMap = function(){
 plotIndices = function(){
   
   
-  data = loadData("bass") #load again because we use all data for training
+  data = loadData("bass") 
+  
+  ###############
+  # project coordinates to local grid
+  sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+  sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+  #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+  coords <- st_coordinates(sf_etrs89_projected)
+  orig.south=data$SOUTH
+  data$WEST = coords[,1]
+  data$SOUTH = coords[,2]
+  ##############
+  
+  
   data.imp.gam = doImputation(data,c("24","25","26","28_2"),doNoFilter,trainTestGAM2,years=2001:2021)
-  data.imp.gam$model="GAM2"
+  data.imp.gam$model="GAM-M"
   
   data.imp.baseline = doImputation(data,c("24","25","26","28_2"),doNoFilter,traintestBaseline,years=c(2001:2015,2017:2021))
   data.imp.baseline$model="Baseline"
@@ -100,7 +129,7 @@ plotIndices = function(){
     summarise(index = sum(value)) -> ind      
   ind = rbind(ind,data.frame(Year=2016,model="Baseline",index=NA))
   
-  ind$model=factor(ind$model,levels=c("GAM2","Baseline"))
+  ind$model=factor(ind$model,levels=c("GAM-M","Baseline"))
   
   p= ggplot(ind)+
     geom_line(aes(x=Year,y=index,color=model,linetype=model))+
@@ -134,6 +163,17 @@ plot2016 = function(){
   
   type = "bass"
   data = loadData(type)
+  ###############
+  # project coordinates to local grid
+  sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+  sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+  #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+  coords <- st_coordinates(sf_etrs89_projected)
+  orig.south=data$SOUTH
+  data$WEST = coords[,1]
+  data$SOUTH = coords[,2]
+  ##############
+  
   sds = c("24","25","26","28_2") #bass
   
   data = data[data$Sub_Div %in% sds,]
@@ -142,7 +182,7 @@ plot2016 = function(){
   data.imp = doImputation(data,sds,doNoFilter,trainTestGAM2,years=2016)
   
   p = plotMap.imputed(data.imp,2016,"Age2")
-  
+  p
   
   ggsave("figures/index/map2016age2.png",p,width=6,height=4)
 }
