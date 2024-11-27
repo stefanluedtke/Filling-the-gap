@@ -68,7 +68,7 @@ trainTestGAM2 = function(train,test,k=15){
     te = test[test$variable == yvi,]
     
     #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
-    gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) + log(mobs),data=dat,family=tw(link="log"),method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) + log(mobs+1),data=dat,family=tw(link="log"),method="REML")
     pred = predict(gmod,te,type="response")
     test$pred[test$variable==yvi] <<- pred
     NA
@@ -77,6 +77,68 @@ trainTestGAM2 = function(train,test,k=15){
   res = data.frame(pred=test$pred,truth=test$value)
   
 }
+
+
+trainTestGAM2.tw.by = function(train,test,k=15){
+  
+  #group test samples by variable
+  uyv = unique(test$variable)
+  test$pred = NA
+  test$id <- 1:nrow(test)
+  
+  mobs = train %>% group_by(Year,variable) %>% summarise(mobs = mean(value),.groups = "drop")
+  train = merge(train,mobs,by=c("Year","variable"))
+  #test = merge(test,mobs,by=c("Year","variable"))
+  testm = merge(test,mobs,by=c("Year","variable"))
+  test <- testm[order(testm$id),]
+  
+  res = do.call("rbind",lapply(uyv,function(yvi){
+    #print(yvi)
+    dat = train[train$variable == yvi,]
+    te = test[test$variable == yvi,]
+    
+    #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k,by=log(mobs*Area)),data=dat,family=tw(link="log"),method="REML")
+    # gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) + log(mobs),data=dat,family=tw(link="log"),method="REML")
+    pred = predict(gmod,te,type="response")
+    test$pred[test$variable==yvi] <<- pred
+    NA
+  }))
+  
+  res = data.frame(pred=test$pred,truth=test$value)
+  
+}
+
+trainTestGAM2.gaussian.by = function(train,test,k=15){
+  
+  #group test samples by variable
+  uyv = unique(test$variable)
+  test$pred = NA
+  test$id <- 1:nrow(test)
+  
+  mobs = train %>% group_by(Year,variable) %>% summarise(mobs = mean(value),.groups = "drop")
+  train = merge(train,mobs,by=c("Year","variable"))
+  #test = merge(test,mobs,by=c("Year","variable"))
+  testm = merge(test,mobs,by=c("Year","variable"))
+  test <- testm[order(testm$id),]
+  
+  res = do.call("rbind",lapply(uyv,function(yvi){
+    #print(yvi)
+    dat = train[train$variable == yvi,]
+    te = test[test$variable == yvi,]
+    
+    # gmod = gam(value ~ s(SOUTH,WEST,k=k,bs="gp") + mobs + Area,data=dat,family=tw(link="log"),method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
+    pred = predict(gmod,te,type="response")
+    test$pred[test$variable==yvi] <<- pred
+    NA
+  }))
+  
+  res = data.frame(pred=test$pred,truth=test$value)
+  
+}
+
+
 
 trainTestGAM2.gaussian = function(train,test,k=15){
   
@@ -97,7 +159,7 @@ trainTestGAM2.gaussian = function(train,test,k=15){
     te = test[test$variable == yvi,]
     
     # gmod = gam(value ~ s(SOUTH,WEST,k=k,bs="gp") + mobs + Area,data=dat,family=tw(link="log"),method="REML")
-    gmod = gam(value ~ s(SOUTH,WEST,k=k,by=mobs*Area),data=dat,method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) + log(mobs+1),data=dat,method="REML")
     pred = predict(gmod,te,type="response")
     test$pred[test$variable==yvi] <<- pred
     NA

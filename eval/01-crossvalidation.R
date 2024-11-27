@@ -7,9 +7,9 @@ require(data.table)
 require(ggplot2)
 
 #assign colors to the different methods
-group.colors <- c(GAM1 = "#6baed6", GAM2 = "#08519c", LMM1 = "#74c476", LMM2 = "#006d2c", XGB1 = "#fd8d3c", XGB2 = "#a63603", Baseline = "#252525", GAM2.tweedie ="#a50f15")
-
-
+group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
+                  "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
+                  "Baseline" = "#252525")
 
 doAllCV = function(){
   
@@ -24,7 +24,7 @@ doAllCV = function(){
     
     ###############
     # project coordinates to local grid
-    sf_wgs84 <- st_as_sf(data, coords = c("SOUTH","WEST"), crs = 4326) 
+    sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order of lat,lon
     sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
     #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
     coords <- st_coordinates(sf_etrs89_projected)
@@ -48,25 +48,26 @@ doAllCV = function(){
         
         res.lmer1 = doCV.RectPercent(data,traintestLMER1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer1$model="LMM-SDEffect"
-
+        
         res.lmer2 = doCV.RectPercent(data,traintestLMER2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer2$model="LMM-noSDEffect"
-
+        
         res.gam1 = doCV.RectPercent(data,trainTestGAM1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.gam1$model="GAM-noM"
-
-        res.gam2 = doCV.RectPercent(data,trainTestGAM2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
+        
+        res.gam2 = doCV.RectPercent(data,trainTestGAM2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
         res.gam2$model="GAM-M"
-
+        
         res.xgb1 = doCV.RectPercent(data,traintestXGB,doTargetEncoding.TrainTest.vy.vr,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.xgb1$model="XGB-noSDInteraction"
         
         res.xgb2 = doCV.RectPercent(data,traintestXGB,doTargetEncoding.TrainTest.vsy.vr,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.xgb2$model="XGB-SDInteraction"
         
+        
         #todo other models
-        res = rbind(res.baseline,res.lmer1,res.lmer2,res.gam2,res.gam2,res.xgb1,res.xgb2)
-
+        res = rbind(res.baseline,res.lmer1,res.lmer2,res.gam1,res.gam2,res.xgb1,res.xgb2)
+        
         res$testfraction = testfraction
         res$iteration=it
         
@@ -94,21 +95,21 @@ plotCV.grouped = function(){
     
     
     #change model names for plotting
-    tp$model[tp$model=="baseline"] = "Baseline"
-    tp$model[tp$model=="gam1"] = "GAM1"
-    tp$model[tp$model=="gam2"] = "GAM2"
-    tp$model[tp$model=="lmer1"] = "LMM1"
-    tp$model[tp$model=="lmer2"] = "LMM2"
-    tp$model[tp$model=="xgb1"] = "XGB1"
-    tp$model[tp$model=="xgb2"] = "XGB2"
+    # tp$model[tp$model=="baseline"] = "Baseline"
+    # tp$model[tp$model=="gam1"] = "GAM1"
+    # tp$model[tp$model=="gam2"] = "GAM2"
+    # tp$model[tp$model=="lmer1"] = "LMM1"
+    # tp$model[tp$model=="lmer2"] = "LMM2"
+    # tp$model[tp$model=="xgb1"] = "XGB1"
+    # tp$model[tp$model=="xgb2"] = "XGB2"
     
     tp$mtype = "Baseline"
-    tp$mtype[tp$model %in% c("GAM1","GAM2")] = "GAM"
-    tp$mtype[tp$model %in% c("LMM1","LMM2")] = "LMM"
-    tp$mtype[tp$model %in% c("XGB1","XGB2")] = "XGB"
+    tp$mtype[tp$model %in% c("GAM-noM","GAM-M")] = "GAM"
+    tp$mtype[tp$model %in% c("LMM-SDEffect","LMM-noSDEffect")] = "LMM"
+    tp$mtype[tp$model %in% c("XGB-noSDInteraction","XGB-SDInteraction")] = "XGB"
     
     tp$ftype = "sd"
-    tp$ftype[tp$model %in% c("GAM1","GAM2","LMM2","XGB1")] = "no_sd"
+    tp$ftype[tp$model %in% c("GAM-noM","GAM-M","LMM-noSDEffect","LMM2","XGB-noSDInteraction")] = "no_sd"
     
     
     #scaling factor: need all truth data first
@@ -120,7 +121,7 @@ plotCV.grouped = function(){
       summarise(scale=sd(value))
     tp = merge(tp,sa,by="variable")
     
-
+    
     tp %>%
       dplyr::group_by(model,variable,testfraction,iteration,mtype,ftype) %>%
       dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))/mean(scale)) %>%
@@ -166,7 +167,7 @@ plotCV.grouped = function(){
       dplyr::group_by(model,testfraction,ftype,mtype) %>%
       dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
                        rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
-
+    
     
     p = ggplot(tp2)+
       geom_line(aes(x=testfraction,y=r2m,color=model,linetype=ftype,group=model))+
@@ -191,7 +192,7 @@ plotCV.grouped = function(){
     
     ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)
     
-  
+    
     
   }
   
@@ -282,7 +283,7 @@ plotTweedie = function(){
     labs(x="p",y="R2",color="Model")+
     theme_light()+
     scale_color_manual(values=group.colors)
-    
+  
   p
   
   ggsave(paste0("figures/cv/tweedie-impute-r2-","bias",".png"),p,width=6,height=4)
