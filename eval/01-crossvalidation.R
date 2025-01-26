@@ -5,6 +5,7 @@ source("code/utils.R")
 
 require(data.table)
 require(ggplot2)
+library(ggpubr)
 
 #assign colors to the different methods
 group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
@@ -127,7 +128,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model",linetype="Features")+
       theme_light()+      
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
     
     p
     
@@ -140,11 +142,31 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="NRMSE",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
     
     p
     
     ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
+    
+    #save legend
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+      facet_wrap(~variable,scales = "free_y")+ #
+      theme(legend.position = "right")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "bottom")
+    
+    leg = get_legend(p)
+    as_ggplot(leg)
+    
+    
+    ggsave("figures/cv/legend.png",leg,width=8,height=0.6)
+    
+    # grid.newpage()
+    # grid.draw(legend)
     
     
     tp %>%
@@ -165,7 +187,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-r2-",fn,".png"),p,width=6,height=4)
@@ -177,7 +200,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="NRMSE",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)
@@ -189,7 +213,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="NMAE",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-mae-",fn,".png"),p,width=6,height=4)

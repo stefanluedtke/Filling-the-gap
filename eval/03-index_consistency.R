@@ -172,7 +172,8 @@ plotIndexStability = function(){
       #geom_ribbon(aes(x=removeFrac,ymin = r2l,ymax = r2u, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="R2",color="Model")+
       theme_light()+
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/index/index-r2-",type,".png"),p,width=6,height=4)
@@ -184,10 +185,29 @@ plotIndexStability = function(){
       #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
       labs(x="p",y="NRMSE",color="Model")+
       theme_light()+
-      scale_color_manual(values=group.colors)
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
+    
     p
     
     ggsave(paste0("figures/index/index-rmse-",type,".png"),p,width=6,height=4)
+    
+    #plot legend
+    p = ggplot(tp2)+
+      geom_line(aes(x=removeFrac,y=rmsem,color=type))+
+      geom_point(aes(x=removeFrac,y=rmsem,color=type))+
+      #geom_ribbon(aes(x=removeFrac,ymin = rmsel,ymax = rmseu, fill = type), alpha = 0.1, show.legend = F)+
+      labs(x="p",y="NRMSE",color="Model")+
+      theme_light()+
+      scale_color_manual(values=group.colors)+
+      theme(legend.position="bottom")
+    p
+    
+    leg = get_legend(p)
+    as_ggplot(leg)
+    
+    
+    ggsave("figures/index/legend_index.png",leg,width=8,height=0.6)
     
     
   }

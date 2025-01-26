@@ -1,5 +1,8 @@
 setwd("~/projects/OTC_Thuenen/Filling-the-gap/")
 
+library(grid)
+library(gridExtra) 
+
 source("code/models.R")
 source("code/utils.R")
 source("eval/02-extrapolation.R")
@@ -23,7 +26,7 @@ plotExtrapolationExampleMap = function(){
   sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
   #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
   coords <- st_coordinates(sf_etrs89_projected)
-  orig.south=data$SOUTH
+  data$orig.south=data$SOUTH
   data$WEST = coords[,1]
   data$SOUTH = coords[,2]
   ##############
@@ -32,21 +35,21 @@ plotExtrapolationExampleMap = function(){
                              featurefun = doNoFilter,orig.south = orig.south) 
   data2 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data2$value[!is.na(data2$pred)] = data2$pred[!is.na(data2$pred)]
-  data2 = data2[,-c(9:10)]
+  data2 = data2[,-c(10:11)]
   
   
   data.imp = evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = year,featurefun = doNoFilter,
                              orig.south = orig.south) 
   data3 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data3$value[!is.na(data3$pred)] = data3$pred[!is.na(data3$pred)]
-  data3 = data3[,-c(9:10)]
+  data3 = data3[,-c(10:11)]
   
   
   data.imp = evalMuchMissing(data,function(tr,te) traintestXGB(tr,te),testyear = year,
                              featurefun = doTargetEncoding.TrainTest.vy.vr,orig.south = orig.south) 
   data4 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data4$value[!is.na(data4$pred)] = data4$pred[!is.na(data4$pred)]
-  data4 = data4[,-c(9:10)]
+  data4 = data4[,-c(10:11)]
   
   #data$wasImp = FALSE
 
@@ -56,7 +59,7 @@ plotExtrapolationExampleMap = function(){
   data4$model = "XGB-noSDInteraction"
   data.imp = rbind(data,data2,data3,data4)
   data.imp$wasImp = FALSE
-  data.imp$wasImp[data.imp$SOUTH<57.5] = TRUE
+  data.imp$wasImp[data.imp$orig.south<57.5] = TRUE
   data.imp$wasImp[data.imp$model == "Truth"] = FALSE
   
   data.imp$model = factor(data.imp$model,levels=c("Truth","LMM-noSDEffect","XGB-noSDInteraction","GAM-M"))
