@@ -19,6 +19,8 @@ traintestLMER = function(train,test,form = value ~ n  + (1|variable) + (1|RECT) 
 traintestBaseline = function(...) traintestLMER(...,form= value ~ (Area+0|Year:Sub_Div:variable))
 traintestLMER1 = function(...) traintestLMER(...,form =  value ~ (Area+0|Year:Sub_Div:variable) + (1|RECT:variable))
 traintestLMER2 = function(...) traintestLMER(...,form = value ~ (Area+0|Year:variable) + (1|RECT:variable))
+traintestLMER3 = function(...) traintestLMER(...,form =  value ~ Area:Year:variable + (Area+0|Year:Sub_Div:variable) +
+                                               (Area+0|RECT:variable))
 
 
 ##############################################################
@@ -160,6 +162,31 @@ trainTestGAM2.gaussian = function(train,test,k=15){
     
     # gmod = gam(value ~ s(SOUTH,WEST,k=k,bs="gp") + mobs + Area,data=dat,family=tw(link="log"),method="REML")
     gmod = gam(value ~ s(SOUTH,WEST,k=k) + log(Area) + log(mobs+1),data=dat,method="REML")
+    pred = predict(gmod,te,type="response")
+    test$pred[test$variable==yvi] <<- pred
+    NA
+  }))
+  
+  res = data.frame(pred=test$pred,truth=test$value)
+  
+}
+
+trainTestGAM3 = function(train,test,k=15){
+  
+  #group test samples by variable
+  uyv = unique(test$variable)
+  test$pred = NA
+  
+  
+  res = do.call("rbind",lapply(uyv,function(yvi){
+    #print(yvi)
+    dat = train[train$variable == yvi,]
+    te = test[test$variable == yvi,]
+    
+    #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=Area),data=dat,method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) + s(SOUTH,WEST,k=k,by=Year)  + # factor(year) +
+                 log(Area) ,data=dat,family=tw(link="log"),method="REML")
+    #+ factor(Year) 
     pred = predict(gmod,te,type="response")
     test$pred[test$variable==yvi] <<- pred
     NA

@@ -86,6 +86,65 @@ doAllCV = function(){
 
 
 
+doCV.newModels = function(){
+  
+  set.seed(42)
+  
+  fns = c("bass","bias","herring")
+  
+  for(fn in fns){
+    
+    data = loadData(fn)
+    data = preprocData.simple(data)
+    
+    ###############
+    # project coordinates to local grid
+    sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+    sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+    #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+    coords <- st_coordinates(sf_etrs89_projected)
+    data$WEST = coords[,1]
+    data$SOUTH = coords[,2]
+    ##############
+    
+    res.complete = do.call("rbind",lapply(1:10,function(it){
+      
+      shuffle = sample(nrow(data),nrow(data),replace = F)
+      data = data[shuffle,]
+      
+      print(paste("iteration",it))
+      
+      res.complete = do.call("rbind",lapply(c(0.1,0.25,0.5,0.75,0.99),function(testfraction){ #
+        
+        print(paste("frac ",testfraction))
+        
+        
+        res.lmer3 = doCV.RectPercent(data,traintestLMER3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        res.lmer3$model="LMM-year"
+        
+        res.gam3 = doCV.RectPercent(data,trainTestGAM3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        res.gam3$model="GAM-year"
+        
+        
+        res = rbind(res.lmer3,res.gam3)
+        
+        res$testfraction = testfraction
+        res$iteration=it
+        
+        res
+        
+      }))
+    }))
+    
+    write.table(res.complete,
+                paste0("results/imputation_cv_newModels_",fn,".csv"),
+                sep=",",col.names = TRUE,row.names = FALSE)
+    
+  }
+}
+
+
+
 plotCV.grouped = function(){
   
   for(fn in c("bass","bias","herring")){
