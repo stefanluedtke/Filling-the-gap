@@ -54,7 +54,7 @@ doAllCV = function(){
         res.lmer2 = doCV.RectPercent(data,traintestLMER2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer2$model="LMM-noSDEffect"
         
-        res.lmer3 = doCV.RectPercent(data,traintestLMER4,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
+        res.lmer3 = doCV.RectPercent(data,traintestLMER3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer3$model="LMM-SDEffect-year"
         
         res.gam2 = doCV.RectPercent(data,trainTestGAM2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
