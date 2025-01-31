@@ -5,7 +5,7 @@ source("code/utils.R")
 
 require(data.table)
 require(ggplot2)
-library(ggpubr)
+# library(ggpubr)
 
 #assign colors to the different methods
 group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c","GAM-year" = "#032c57","GAM-year-main" = "#eb54c0",
