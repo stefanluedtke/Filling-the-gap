@@ -17,11 +17,10 @@ traintestLMER = function(train,test,form = value ~ n  + (1|variable) + (1|RECT) 
 }
 
 traintestBaseline = function(...) traintestLMER(...,form= value ~ (Area+0|Year:Sub_Div:variable))
-traintestLMER1 = function(...) traintestLMER(...,form =  value ~ (Area+0|Year:Sub_Div:variable) + (1|RECT:variable))
-traintestLMER2 = function(...) traintestLMER(...,form = value ~ (Area+0|Year:variable) + (1|RECT:variable))
+traintestLMER1 = function(...) traintestLMER(...,form =  value ~ (Area+0|Year:Sub_Div:variable) + (Area+0|RECT:variable))
+traintestLMER2 = function(...) traintestLMER(...,form = value ~ (Area+0|Year:variable) + (Area+0|RECT:variable))
 traintestLMER3 = function(...) traintestLMER(...,form =  value ~ Area:Year:variable + (Area+0|Year:Sub_Div:variable) +
                                                (Area+0|RECT:variable))
-
 
 ##############################################################
 #GAMs
@@ -171,6 +170,7 @@ trainTestGAM2.gaussian = function(train,test,k=15){
   
 }
 
+#spatio-temporal model, but unfortunately very slow
 trainTestGAM3 = function(train,test,k=15){
   
   #group test samples by variable
@@ -184,7 +184,7 @@ trainTestGAM3 = function(train,test,k=15){
     te = test[test$variable == yvi,]
     
     #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=Area),data=dat,method="REML")
-    gmod = gam(value ~ s(SOUTH,WEST,k=k) + s(SOUTH,WEST,k=k,by=Year)  + # factor(year) +
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) + s(SOUTH,WEST,by=factor(Year),k=k) +  factor(Year) + 
                  log(Area) ,data=dat,family=tw(link="log"),method="REML")
     #+ factor(Year) 
     pred = predict(gmod,te,type="response")
@@ -195,6 +195,33 @@ trainTestGAM3 = function(train,test,k=15){
   res = data.frame(pred=test$pred,truth=test$value)
   
 }
+
+#this is more or less identical to GAM2 (with M) -> if it's giving same performance, can replace the M (hard to understand) 
+trainTestGAM2b = function(train,test,k=15){
+  
+  #group test samples by variable
+  uyv = unique(test$variable)
+  test$pred = NA
+  
+  
+  res = do.call("rbind",lapply(uyv,function(yvi){
+    #print(yvi)
+    dat = train[train$variable == yvi,]
+    te = test[test$variable == yvi,]
+    
+    #gmod = gam(value ~ s(SOUTH,WEST,k=k,by=Area),data=dat,method="REML")
+    gmod = gam(value ~ s(SOUTH,WEST,k=k) +  factor(Year) + #,by=factor(Year)
+               log(Area) ,data=dat,family=tw(link="log"),method="REML")
+    #+ factor(Year) 
+    pred = predict(gmod,te,type="response")
+    test$pred[test$variable==yvi] <<- pred
+    NA
+  }))
+  
+  res = data.frame(pred=test$pred,truth=test$value)
+  
+}
+
 
 ##############################################################
 #Boosted trees

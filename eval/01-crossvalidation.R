@@ -8,7 +8,8 @@ require(ggplot2)
 library(ggpubr)
 
 #assign colors to the different methods
-group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
+group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c","GAM-year" = "#032c57","GAM-year-main" = "#eb54c0",
+                  "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c","LMM-year" = "#033316","LMM-factoryear" = "#e33b4f",
                   "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
                   "Baseline" = "#252525")
 
@@ -53,8 +54,8 @@ doAllCV = function(){
         res.lmer2 = doCV.RectPercent(data,traintestLMER2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer2$model="LMM-noSDEffect"
         
-        res.gam1 = doCV.RectPercent(data,trainTestGAM1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
-        res.gam1$model="GAM-noM"
+        res.lmer3 = doCV.RectPercent(data,traintestLMER4,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
+        res.lmer3$model="LMM-SDEffect-year"
         
         res.gam2 = doCV.RectPercent(data,trainTestGAM2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
         res.gam2$model="GAM-M"
@@ -67,7 +68,7 @@ doAllCV = function(){
         
         
         #todo other models
-        res = rbind(res.baseline,res.lmer1,res.lmer2,res.gam1,res.gam2,res.xgb1,res.xgb2)
+        res = rbind(res.baseline,res.lmer1,res.lmer2,res.lmer3,res.gam2,res.xgb1,res.xgb2)
         
         res$testfraction = testfraction
         res$iteration=it
@@ -78,7 +79,7 @@ doAllCV = function(){
     }))
     
     write.table(res.complete,
-                paste0("results/imputation_cv_",fn,".csv"),
+                paste0("results/imputation_cv2_",fn,".csv"),
                 sep=",",col.names = TRUE,row.names = FALSE)
     
   }
@@ -90,7 +91,7 @@ doCV.newModels = function(){
   
   set.seed(42)
   
-  fns = c("bass","bias","herring")
+  fns = c("bass") #,"bias","herring"
   
   for(fn in fns){
     
@@ -119,14 +120,20 @@ doCV.newModels = function(){
         print(paste("frac ",testfraction))
         
         
-        res.lmer3 = doCV.RectPercent(data,traintestLMER3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
-        res.lmer3$model="LMM-year"
+        # res.lmer3 = doCV.RectPercent(data,traintestLMER3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        # res.lmer3$model="LMM-year"
         
-        res.gam3 = doCV.RectPercent(data,trainTestGAM3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
-        res.gam3$model="GAM-year"
+        # res.lmer3b = doCV.RectPercent(data,traintestLMER3b,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        # res.lmer3b$model="LMM-factoryear"
+        
+        # res.gam3 = doCV.RectPercent(data,trainTestGAM3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        # res.gam3$model="GAM-year"
+        
+        res.gam3b = doCV.RectPercent(data,trainTestGAM3b,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
+        res.gam3b$model="GAM-year-main"
         
         
-        res = rbind(res.lmer3,res.gam3)
+        res = rbind(res.gam3b) #,res.gam3)
         
         res$testfraction = testfraction
         res$iteration=it
@@ -137,7 +144,7 @@ doCV.newModels = function(){
     }))
     
     write.table(res.complete,
-                paste0("results/imputation_cv_newModels_",fn,".csv"),
+                paste0("results/imputation_cv_GAM3b_",fn,".csv"),
                 sep=",",col.names = TRUE,row.names = FALSE)
     
   }
@@ -277,6 +284,156 @@ plotCV.grouped = function(){
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-mae-",fn,".png"),p,width=6,height=4)
+    
+    
+    
+  }
+  
+}
+
+
+
+
+
+
+plotCV.new = function(){
+  
+  for(fn in c("bass")){ #,"bias","herring"
+    
+    
+    res.complete = fread(paste0("results/imputation_cv_",fn,".csv"))
+    res.new = fread(paste0("results/imputation_cv_newModels_",fn,".csv"))
+    res.gam = fread(paste0("results/imputation_cv_GAM3b_",fn,".csv"))
+    res.lmer = fread(paste0("results/imputation_cv_LMER3b_",fn,".csv"))
+    
+    res.complete=rbind(res.complete,res.new,res.gam,res.lmer)
+    
+    tp = res.complete
+    
+    tp$mtype = "Baseline"
+    tp$mtype[tp$model %in% c("GAM-noM","GAM-M","GAM-year","GAM-year-main")] = "GAM"
+    tp$mtype[tp$model %in% c("LMM-SDEffect","LMM-noSDEffect","LMM-year","LMM-factoryear")] = "LMM"
+    tp$mtype[tp$model %in% c("XGB-noSDInteraction","XGB-SDInteraction")] = "XGB"
+    
+    tp$ftype = "sd"
+    tp$ftype[tp$model %in% c("GAM-noM","GAM-M","GAM-year","GAM-year-main","LMM-noSDEffect","LMM2","XGB-noSDInteraction")] = "no_sd"
+    
+    
+    #scaling factor: need all truth data first
+    data = loadData(fn)
+    data = preprocData.simple(data)
+    #scale per age group
+    sa = data %>%
+      group_by(variable) %>% 
+      summarise(scale=sd(value))
+    tp = merge(tp,sa,by="variable")
+    
+    
+    tp %>%
+      dplyr::group_by(model,variable,testfraction,iteration,mtype,ftype) %>%
+      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2))/mean(scale)) %>%
+      ungroup() %>%
+      group_by(model,variable,testfraction,mtype,ftype) %>%
+      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
+                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=r2m,color=model,linetype=ftype,group=model))+
+      facet_wrap(~variable,scales="free_y")+
+      #geom_ribbon(aes(x=testfraction,ymin = r2l,ymax = r2u, fill = model), alpha = 0.1, show.legend = F)+
+      theme(legend.position = "right")+
+      labs(x="p",y="R2",color="Model",linetype="Features")+
+      theme_light()+      
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
+    
+    p
+    
+    #ggsave(paste0("figures/cv/all-impute-agewise-r2-",fn,".png"),p,width=8,height=6)
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+      #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
+      facet_wrap(~variable,scales = "free_y")+ #
+      theme(legend.position = "right")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
+    
+    p
+    
+    #ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
+    
+    #save legend
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+      facet_wrap(~variable,scales = "free_y")+ #
+      theme(legend.position = "right")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "bottom")
+    
+    leg = get_legend(p)
+    as_ggplot(leg)
+    
+    
+    #ggsave("figures/cv/legend.png",leg,width=8,height=0.6)
+    
+    # grid.newpage()
+    # grid.draw(legend)
+    
+    
+    tp %>%
+      dplyr::group_by(model,variable,testfraction,iteration,ftype,mtype) %>%
+      dplyr::summarise(r2=cor(pred,truth)^2,rmse=sqrt(mean((pred-truth)^2)),scale=mean(scale),mae=mean(abs(pred-truth))) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(model,testfraction,iteration,ftype,mtype) %>%
+      dplyr::summarise(r2=mean(r2),rmse=mean(rmse)/mean(scale),mae=mean(mae)/mean(scale)) %>%
+      dplyr::ungroup() %>%
+      dplyr::group_by(model,testfraction,ftype,mtype) %>%
+      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],mae=mean(mae),
+                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
+    
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=r2m,color=model,linetype=ftype,group=model))+
+      geom_point(aes(x=testfraction,y=r2m,color=model,group=model))+
+      theme(legend.position = "right")+
+      labs(x="p",y="R2",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)
+      #theme(legend.position = "none")
+    p
+    
+    #ggsave(paste0("figures/cv/all-impute-grouped-r2-",fn,".png"),p,width=6,height=4)
+    
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+      geom_point(aes(x=testfraction,y=rmsem,color=model,group=model))+
+      theme(legend.position = "right")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)
+      #theme(legend.position = "none")
+    p
+    
+    #ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)
+    
+    p = ggplot(tp2)+
+      geom_line(aes(x=testfraction,y=mae,color=model,linetype=ftype,group=model))+
+      geom_point(aes(x=testfraction,y=mae,color=model,group=model))+
+      #geom_ribbon(aes(x=testfraction,ymin = rmsel,ymax = rmseu, fill = mod), alpha = 0.1, show.legend = F)+
+      theme(legend.position = "right")+
+      labs(x="p",y="NMAE",color="Model",linetype="Features")+
+      theme_light()+
+      scale_color_manual(values=group.colors)+
+      theme(legend.position = "none")
+    p
+    
+    #ggsave(paste0("figures/cv/all-impute-grouped-mae-",fn,".png"),p,width=6,height=4)
     
     
     
