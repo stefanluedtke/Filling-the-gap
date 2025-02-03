@@ -17,8 +17,11 @@ traintestLMER = function(train,test,form = value ~ n  + (1|variable) + (1|RECT) 
 }
 
 traintestBaseline = function(...) traintestLMER(...,form= value ~ (Area+0|Year:Sub_Div:variable))
+#no year effect
 traintestLMER1 = function(...) traintestLMER(...,form =  value ~ (Area+0|Year:Sub_Div:variable) + (Area+0|RECT:variable))
-traintestLMER2 = function(...) traintestLMER(...,form = value ~ (Area+0|Year:variable) + (Area+0|RECT:variable))
+#no SD term
+traintestLMER2 = function(...) traintestLMER(...,form = value ~ Area:Year:variable + (Area+0|Year:variable) + (Area+0|RECT:variable))
+#full model with year main effect and Sd random slope 
 traintestLMER3 = function(...) traintestLMER(...,form =  value ~ Area:Year:variable + (Area+0|Year:Sub_Div:variable) +
                                                (Area+0|RECT:variable))
 
