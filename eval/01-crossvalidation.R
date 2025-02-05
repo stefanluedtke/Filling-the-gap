@@ -5,19 +5,20 @@ source("code/utils.R")
 
 require(data.table)
 require(ggplot2)
-# library(ggpubr)
+library(ggpubr)
+# require(cowplot)
 
 #assign colors to the different methods
-group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c","GAM-year" = "#032c57","GAM-year-main" = "#eb54c0",
-                  "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c","LMM-year" = "#033316","LMM-factoryear" = "#e33b4f",
+group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c","GAM-year" = "#032c57",
+                  "LMM-SDEffect" = "#a9f5ab", "LMM-noSDEffect" = "#018c39","LMM-SDEffect-year" = "#054d22",
                   "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
-                  "Baseline" = "#252525")
+                  "Baseline" = "#121212")
 
 doAllCV = function(){
   
   set.seed(42)
   
-  fns = c("bass","bias","herring")
+  fns = c("bass") #,"bias","herring"
   
   for(fn in fns){
     
@@ -45,29 +46,31 @@ doAllCV = function(){
         
         print(paste("frac ",testfraction))
         
+        # res.baseline = doCV.RectPercent(data,traintestBaseline,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
+        # res.baseline$model="Baseline"
+        
         res.baseline = doCV.RectPercent(data,traintestBaseline,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.baseline$model="Baseline"
         
         res.lmer1 = doCV.RectPercent(data,traintestLMER1,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer1$model="LMM-SDEffect"
-        
+
         res.lmer2 = doCV.RectPercent(data,traintestLMER2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer2$model="LMM-noSDEffect"
-        
+
         res.lmer3 = doCV.RectPercent(data,traintestLMER3,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.lmer3$model="LMM-SDEffect-year"
-        
+
         res.gam2 = doCV.RectPercent(data,trainTestGAM2,doNoFilter,testfraction = testfraction,getPredicion = TRUE,doPrint = T)
         res.gam2$model="GAM-M"
-        
+
         res.xgb1 = doCV.RectPercent(data,traintestXGB,doTargetEncoding.TrainTest.vy.vr,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.xgb1$model="XGB-noSDInteraction"
-        
+
         res.xgb2 = doCV.RectPercent(data,traintestXGB,doTargetEncoding.TrainTest.vsy.vr,testfraction = testfraction,getPredicion = TRUE,doPrint = F)
         res.xgb2$model="XGB-SDInteraction"
         
         
-        #todo other models
         res = rbind(res.baseline,res.lmer1,res.lmer2,res.lmer3,res.gam2,res.xgb1,res.xgb2)
         
         res$testfraction = testfraction
@@ -79,7 +82,7 @@ doAllCV = function(){
     }))
     
     write.table(res.complete,
-                paste0("results/imputation_cv2_",fn,".csv"),
+                paste0("results/imputation_cv_",fn,".csv"),
                 sep=",",col.names = TRUE,row.names = FALSE)
     
   }
@@ -157,16 +160,19 @@ plotCV.grouped = function(){
   for(fn in c("bass","bias","herring")){
     
     
-    res.complete = fread(paste0("results/imputation_cv_",fn,".csv"))
+    res.complete = fread(paste0("results/imputation_cv_baseline_",fn,".csv"))
+    res.2 = fread(paste0("results/imputation_cv_",fn,".csv"))
+    res.2 = res.2[res.2$model!="Baseline",]
+    res.complete = rbind(res.complete,res.2)
     tp = res.complete
     
     tp$mtype = "Baseline"
     tp$mtype[tp$model %in% c("GAM-noM","GAM-M")] = "GAM"
-    tp$mtype[tp$model %in% c("LMM-SDEffect","LMM-noSDEffect")] = "LMM"
+    tp$mtype[tp$model %in% c("LMM-SDEffect","LMM-noSDEffect","LMM-SDEffect-year")] = "LMM"
     tp$mtype[tp$model %in% c("XGB-noSDInteraction","XGB-SDInteraction")] = "XGB"
     
     tp$ftype = "sd"
-    tp$ftype[tp$model %in% c("GAM-noM","GAM-M","LMM-noSDEffect","LMM2","XGB-noSDInteraction")] = "no_sd"
+    tp$ftype[tp$model %in% c("GAM-noM","GAM-M","LMM-noSDEffect","XGB-noSDInteraction")] = "no_sd"
     
     
     #scaling factor: need all truth data first
@@ -243,8 +249,8 @@ plotCV.grouped = function(){
       dplyr::summarise(r2=mean(r2),rmse=mean(rmse)/mean(scale),mae=mean(mae)/mean(scale)) %>%
       dplyr::ungroup() %>%
       dplyr::group_by(model,testfraction,ftype,mtype) %>%
-      dplyr::summarise(r2m=mean(r2),r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],mae=mean(mae),
-                       rmsem=mean(rmse),rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2])-> tp2
+      dplyr::summarise(r2m=mean(r2),mae=mean(mae), #,r2l=t.test(r2)$conf.int[1],r2u=t.test(r2)$conf.int[2],
+                       rmsem=mean(rmse))-> tp2 #,rmsel=t.test(rmse)$conf.int[1],rmseu=t.test(rmse)$conf.int[2]
     
     
     p = ggplot(tp2)+
@@ -253,8 +259,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="R2",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)+
-      theme(legend.position = "none")
+      scale_color_manual(values=group.colors)
+    #theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-r2-",fn,".png"),p,width=6,height=4)
@@ -266,8 +272,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="NRMSE",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)+
-      theme(legend.position = "none")
+      scale_color_manual(values=group.colors)
+      #theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)
@@ -279,8 +285,8 @@ plotCV.grouped = function(){
       theme(legend.position = "right")+
       labs(x="p",y="NMAE",color="Model",linetype="Features")+
       theme_light()+
-      scale_color_manual(values=group.colors)+
-      theme(legend.position = "none")
+      scale_color_manual(values=group.colors)
+      #theme(legend.position = "none")
     p
     
     ggsave(paste0("figures/cv/all-impute-grouped-mae-",fn,".png"),p,width=6,height=4)
@@ -404,7 +410,7 @@ plotCV.new = function(){
       labs(x="p",y="R2",color="Model",linetype="Features")+
       theme_light()+
       scale_color_manual(values=group.colors)
-      #theme(legend.position = "none")
+    #theme(legend.position = "none")
     p
     
     #ggsave(paste0("figures/cv/all-impute-grouped-r2-",fn,".png"),p,width=6,height=4)
@@ -417,7 +423,7 @@ plotCV.new = function(){
       labs(x="p",y="NRMSE",color="Model",linetype="Features")+
       theme_light()+
       scale_color_manual(values=group.colors)
-      #theme(legend.position = "none")
+    #theme(legend.position = "none")
     p
     
     #ggsave(paste0("figures/cv/all-impute-grouped-rmse-",fn,".png"),p,width=6,height=4)

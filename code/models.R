@@ -16,13 +16,54 @@ traintestLMER = function(train,test,form = value ~ n  + (1|variable) + (1|RECT) 
   r
 }
 
-traintestBaseline = function(...) traintestLMER(...,form= value ~ (Area+0|Year:Sub_Div:variable))
-#no year effect
+traintestLM = function(train,test,form = value ~ n  + (1|variable) + (1|RECT) + (1|year),allow.new.levels=FALSE){
+  
+  mod = lm(form,data=train)
+  pred = predict(mod,test,allow.new.levels=allow.new.levels)
+  
+  r = data.frame(pred=pred,truth=test$value)
+  colnames(r) = c("pred","truth")
+  r
+}
+
+traintestBaseline = function(train,test){
+  
+  #for each test SD and test year
+  #compute "density" abundance per area from available data
+  #extrapolate to each rectangle 
+  uy = unique(test$Year)
+  us = unique(test$Sub_Div)
+  uv = unique(test$variable)
+
+
+  res = do.call("rbind",lapply(uv,function(vv){
+    do.call("rbind",lapply(uy,function(yy){
+      do.call("rbind",lapply(us,function(ss){
+        testsub = test[test$Year==yy & test$Sub_Div == ss & test$variable==vv,]
+        trainsub = train[train$Year==yy & train$Sub_Div == ss & train$variable==vv,]
+        
+        #compute density (abundance per area) from train
+        dens = sum(trainsub$value) / sum(trainsub$Area)
+        #(do not change order of test)
+        test$pred[test$Year==yy & test$Sub_Div == ss & test$variable==vv] <<- (testsub$Area * dens)
+      }))
+    }))
+  }))
+  
+  
+  r = data.frame(pred=test$pred,truth=test$value)
+  colnames(r) = c("pred","truth")
+  r
+}
+
+#traintestBaseline = function(...) traintestLMER(...,form= value ~ (Area+0|Year:Sub_Div:variable))
+traintestBaseline.lm = function(...) traintestLM(...,form= value ~ Area:Year:Sub_Div:variable + 0)
+#no year fixed effect
 traintestLMER1 = function(...) traintestLMER(...,form =  value ~ (Area+0|Year:Sub_Div:variable) + (Area+0|RECT:variable))
 #no SD term
-traintestLMER2 = function(...) traintestLMER(...,form = value ~ Area:Year:variable + (Area+0|Year:variable) + (Area+0|RECT:variable))
+traintestLMER2 = function(...) traintestLMER(...,form = value ~ Area:factor(Year):variable + (Area+0|Year:variable) + (Area+0|RECT:variable))
 #full model with year main effect and Sd random slope 
-traintestLMER3 = function(...) traintestLMER(...,form =  value ~ Area:Year:variable + (Area+0|Year:Sub_Div:variable) +
+traintestLMER3 = function(...) traintestLMER(...,form =  value ~ Area:factor(Year):variable + (Area+0|Year:Sub_Div:variable) +
                                                (Area+0|RECT:variable))
 
 ##############################################################

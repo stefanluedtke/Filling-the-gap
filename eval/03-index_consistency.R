@@ -55,9 +55,9 @@ evalIndexStability.all = function(){
       stab.baseline$type = "Baseline"
       
       #complex LMER
-      stab.lmerComplex = evalIndexStability(data,sds,doNoFilter,traintestLMER1,removeFrac,skipyears = skipyears)
+      stab.lmerComplex = evalIndexStability(data,sds,doNoFilter,traintestLMER3,removeFrac,skipyears = skipyears)
       stab.lmerComplex$removeFrac = removeFrac
-      stab.lmerComplex$type = "LMM-SDEffect"
+      stab.lmerComplex$type = "LMM-SDEffect-year"
       
       #XGB (the one with the rect interaction effect)
       stab.xgb = evalIndexStability(data,sds,doTargetEncoding.TrainTest.vy.vr,traintestXGB,removeFrac,skipyears = skipyears)
