@@ -39,30 +39,31 @@ evalMuchMissing.all = function(){
       years = years[years!=1999 & years != 2000]
     }
     
-    xx = function(tr,te) traintestXGB(tr,te,nrounds=20,max.depth = 3)
+    xx = function(tr,te) traintestXGB(tr,te,nrounds=30,max.depth = 2)
     en = function(tr,te) doTargetEncoding.TrainTest.vy.vr(tr,te)
     res.xgb.vy.vr = do.call("rbind",lapply(years,function(y){
       print(y)
       evalMuchMissing(data,xx,testyear = y,featurefun = en,orig.south=orig.south)
     }))
-    res.xgb.vy.vr$model="XGB-noSDInteraction"
+    res.xgb.vy.vr$model="XGB-noSD"
     
 
-    res.lmm= do.call("rbind",lapply(years,function(y){
-      print(y)
-      evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = y,featurefun = doNoFilter,orig.south=orig.south)
-    }))
-    res.lmm$model="LMM-noSDEffect"
+    # res.lmm= do.call("rbind",lapply(years,function(y){
+    #   print(y)
+    #   evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = y,featurefun = doNoFilter,orig.south=orig.south)
+    # }))
+    # res.lmm$model="LMM-noSD"
+    # 
+    # res.gam.m.a = do.call("rbind",lapply(years,function(y){
+    #   print(y)
+    #   evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = y,featurefun = doNoFilter,orig.south=orig.south) 
+    # }))
+    # res.gam.m.a$model="GAM"
     
-    res.gam.m.a = do.call("rbind",lapply(years,function(y){
-      print(y)
-      evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = y,featurefun = doNoFilter,orig.south=orig.south) 
-    }))
-    res.gam.m.a$model="GAM-M"
     
     
-    
-    res.compl = rbind(res.xgb.vy.vr,res.lmm,res.gam.m.a) 
+    #res.compl = rbind(res.xgb.vy.vr,res.lmm,res.gam.m.a) 
+    res.compl = res.xgb.vy.vr
     
     res.compl$type=fn
     res.compl

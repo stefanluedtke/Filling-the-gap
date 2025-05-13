@@ -4,11 +4,16 @@ source("code/models.R")
 source("code/utils.R")
 
 require(ggplot2)
+# require(cowplot)
+library(ggpubr)
+
 
 #assign colors to the different methods
-group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
-                  "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
-                  "Baseline" = "#252525")
+group.colors <- c( "GAM" = "#08519c", #"GAM-year" = "#032c57","GAM-noM" = "#6baed6",
+                   "LMM-noFE" = "#fd8d3c", "LMM-noSD" = "#d1117b","LMM-full" = "#a63603",
+                   "XGB-noSD" = "#a9f5ab", "XGB-SD" = "#018c39", 
+                   "Baseline" = "#121212")
+
 
 
 evalIndexStability.all = function(){
@@ -60,7 +65,7 @@ evalIndexStability.all = function(){
       stab.lmerComplex$type = "LMM-SDEffect-year"
       
       #XGB (the one with the rect interaction effect)
-      stab.xgb = evalIndexStability(data,sds,doTargetEncoding.TrainTest.vy.vr,traintestXGB,removeFrac,skipyears = skipyears)
+      stab.xgb = evalIndexStability(data,sds,doTargetEncoding.TrainTest.vsy.vr,traintestXGB,removeFrac,skipyears = skipyears)
       stab.xgb$removeFrac = removeFrac
       stab.xgb$type = "XGB-SDInteraction"
       
@@ -86,6 +91,10 @@ plotIndexStability = function(){
     
     stab.all = read.csv(paste0("results/index_leaveOut_",type,".csv"))
     iterations = 10
+    
+    stab.all$type[stab.all$type=="GAM-M"] = "GAM"
+    stab.all$type[stab.all$type=="LMM-SDEffect-year"] = "LMM-full"
+    stab.all$type[stab.all$type=="XGB-SDInteraction"] = "XGB-SD"
     
     
     #scale: sd of true index of that age group

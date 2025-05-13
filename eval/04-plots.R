@@ -7,9 +7,10 @@ source("code/models.R")
 source("code/utils.R")
 source("eval/02-extrapolation.R")
 
-group.colors <- c("GAM-noM" = "#6baed6", "GAM-M" = "#08519c", "LMM-SDEffect" = "#74c476", "LMM-noSDEffect" = "#006d2c",
-                  "XGB-noSDInteraction" = "#fd8d3c", "XGB-SDInteraction" = "#a63603", 
-                  "Baseline" = "#252525")
+group.colors <- c( "GAM" = "#08519c", #"GAM-year" = "#032c57","GAM-noM" = "#6baed6",
+                   "LMM-noFE" = "#fd8d3c", "LMM-noSD" = "#d1117b","LMM-full" = "#a63603",
+                   "XGB-noSD" = "#a9f5ab", "XGB-SD" = "#018c39", 
+                   "Baseline" = "#121212")
 
 
 plotExtrapolationExampleMap = function(){
@@ -32,14 +33,14 @@ plotExtrapolationExampleMap = function(){
   ##############
   
   data.imp = evalMuchMissing(data,function(tr,te) trainTestGAM2(tr,te,k=15),testyear = year,
-                             featurefun = doNoFilter,orig.south = orig.south) 
+                             featurefun = doNoFilter,orig.south = data$orig.south) 
   data2 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data2$value[!is.na(data2$pred)] = data2$pred[!is.na(data2$pred)]
   data2 = data2[,-c(10:11)]
   
   
   data.imp = evalMuchMissing(data,function(tr,te) traintestLMER2(tr,te),testyear = year,featurefun = doNoFilter,
-                             orig.south = orig.south) 
+                             orig.south = data$orig.south) 
   data3 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data3$value[!is.na(data3$pred)] = data3$pred[!is.na(data3$pred)]
   data3 = data3[,-c(10:11)]
@@ -54,15 +55,15 @@ plotExtrapolationExampleMap = function(){
   #data$wasImp = FALSE
 
   data$model = "Truth"
-  data2$model = "GAM-M"
-  data3$model = "LMM-noSDEffect"
-  data4$model = "XGB-noSDInteraction"
+  data2$model = "GAM"
+  data3$model = "LMM-noSD"
+  data4$model = "XGB-noSD"
   data.imp = rbind(data,data2,data3,data4)
   data.imp$wasImp = FALSE
   data.imp$wasImp[data.imp$orig.south<57.5] = TRUE
   data.imp$wasImp[data.imp$model == "Truth"] = FALSE
   
-  data.imp$model = factor(data.imp$model,levels=c("Truth","LMM-noSDEffect","XGB-noSDInteraction","GAM-M"))
+  data.imp$model = factor(data.imp$model,levels=c("Truth","LMM-noSD","XGB-noSD","GAM"))
   
   
   worldmap <- ne_countries(scale = 'medium', type = 'map_units',
@@ -132,7 +133,9 @@ plotIndices = function(){
     summarise(index = sum(value)) -> ind      
   ind = rbind(ind,data.frame(Year=2016,model="Baseline",index=NA))
   
-  ind$model=factor(ind$model,levels=c("GAM-M","Baseline"))
+  ind$model[ind$model=="GAM-M"] = "GAM"
+  
+  ind$model=factor(ind$model,levels=c("GAM","Baseline"))
   
   p= ggplot(ind)+
     geom_line(aes(x=Year,y=index,color=model,linetype=model))+
