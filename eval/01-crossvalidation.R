@@ -166,15 +166,28 @@ plotCV.grouped = function(){
     
     ggsave(paste0("figures/cv/all-impute-agewise-rmse-",fn,".png"),p,width=8,height=6)
     
+    fl = c( "GAM" = "solid", #"GAM-year" = "#032c57","GAM-noM" = "#6baed6",
+                              "LMM-noFE" = "dashed", "LMM-noSD" = "solid","LMM-full" = "dashed",
+                              "XGB-noSD" = "solid", "XGB-SD" = "dashed", 
+                              "Baseline" = "dashed")
     #save legend
     p = ggplot(tp2)+
-      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+      geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=model,group=model))+
       facet_wrap(~variable,scales = "free_y")+ #
-      theme(legend.position = "right")+
-      labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+      labs(x="p",y="NRMSE",color="Model",linetype="Model")+
       theme_light()+
       scale_color_manual(values=group.colors)+
+      scale_linetype_manual(values=fl)+
       theme(legend.position = "bottom")
+    p
+    # p = ggplot(tp2)+
+    #   geom_line(aes(x=testfraction,y=rmsem,color=model,linetype=ftype,group=model))+
+    #   facet_wrap(~variable,scales = "free_y")+ #
+    #   theme(legend.position = "right")+
+    #   labs(x="p",y="NRMSE",color="Model",linetype="Features")+
+    #   theme_light()+
+    #   scale_color_manual(values=group.colors)+
+    #   theme(legend.position = "bottom")
     
     leg = get_legend(p)
     as_ggplot(leg)

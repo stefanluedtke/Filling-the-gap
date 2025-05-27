@@ -47,7 +47,7 @@ plotExtrapolationExampleMap = function(){
   
   
   data.imp = evalMuchMissing(data,function(tr,te) traintestXGB(tr,te),testyear = year,
-                             featurefun = doTargetEncoding.TrainTest.vy.vr,orig.south = orig.south) 
+                             featurefun = doTargetEncoding.TrainTest.vy.vr,orig.south = data$orig.south) 
   data4 = merge(data,data.imp,by=c("RECT","Year","Sub_Div","variable"),all.x = T)
   data4$value[!is.na(data4$pred)] = data4$pred[!is.na(data4$pred)]
   data4 = data4[,-c(10:11)]
@@ -153,14 +153,168 @@ plotIndices = function(){
   
   p = ggplot(ind.age)+
     geom_point(aes(x=Year,y=variable,size=index),color="#08519c")+ 
-    scale_size_area(max_size=10)+
+    scale_size_area("abundance",max_size=10)+
     theme_light()+
-    theme(axis.text.x = element_text(angle=90),legend.position = "none")+
+    theme(axis.text.x = element_text(angle=90),legend.position = "right")+
     labs(y="")
   p
   
-  ggsave("figures/repaired_bass_bubble.png",p,width=6,height=4)
+  ggsave("figures/repaired_bass_bubble.png",p,width=8,height=4)
   
+}
+
+
+
+
+plotInterpolationExamples = function(){
+  
+  #plot all models for two years: 2016 (much missing) and ...
+  
+  type = "bass"
+  data = loadData(type)
+  ###############
+  # project coordinates to local grid
+  sf_wgs84 <- st_as_sf(data, coords = c("WEST","SOUTH"), crs = 4326) #correct order 
+  sf_etrs89_projected <- st_transform(sf_wgs84, crs = 3035)
+  #sf_etrs89_projected <- st_transform(sf_wgs84, crs = 32634) #UTM Zone 34N
+  coords <- st_coordinates(sf_etrs89_projected)
+  orig.south=data$SOUTH
+  data$WEST = coords[,1]
+  data$SOUTH = coords[,2]
+  ##############
+  
+  sds = c("24","25","26","28_2") #bass
+  
+  data = data[data$Sub_Div %in% sds,]
+  
+  ####################
+  #2016
+  ####################
+  yy = 2016
+  
+  #data.imp.baseline = doImputation(data,sds,doNoFilter,traintestBaseline,years=yy)
+  #data.imp.baseline$model = "Baseline"
+  #data.imp.lmm1 = doImputation(data,sds,doNoFilter,traintestLMER1,years=yy)
+  #data.imp.lmm1$model = "LMM-noFE"
+  data.imp.lmm2 = doImputation(data,sds,doNoFilter,traintestLMER2,years=yy)
+  data.imp.lmm2$model = "LMM-noSD"
+  #data.imp.lmm3 = doImputation(data,sds,doNoFilter,traintestLMER3,years=yy)
+  #data.imp.lmm3$model = "LMM-full"
+  data.imp.gam = doImputation(data,sds,doNoFilter,trainTestGAM2,years=yy)
+  data.imp.gam$model = "GAM"
+  data.imp.xgb1 = doImputation(data,sds,doTargetEncoding.TrainTest.vy.vr,traintestXGB,years=yy)
+  data.imp.xgb1$model = "XGB-noSDInteraction"
+  #data.imp.xgb2 = doImputation(data,sds,doTargetEncoding.TrainTest.vsy.vr,traintestXGB,years=yy)
+  #data.imp.xgb2$model = "XGB-SDInteraction"
+  
+  
+  data.imp = rbind(data.imp.lmm2,
+                   data.imp.gam,data.imp.xgb1)
+  
+  
+  worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                           returnclass = 'sf')
+  
+  
+  dd.coord = data.imp[data.imp$Year==yy,]
+  
+  dd.coord = dd.coord %>% group_by(RECT,SOUTH,WEST,Year,Sub_Div,model) %>% 
+    summarise(value=sum(value),wasImp=all(wasImp))
+  
+  #dd.coord = dd.coord[dd.coord$variable == age,]
+  
+  #merge geometry
+  ices <- st_read("data/ICES_rectangles/ICES_Statistical_Rectangles_Eco.shp")
+  ices.b = dplyr::filter(ices,Ecoregion=="Baltic Sea")
+  dd = merge(ices.b,dd.coord,by.x="ICESNAME",by.y="RECT")
+  
+  dd<- dd %>%
+    arrange(wasImp)
+  
+  #maxv=1500
+  #dd$value[dd$value<0] = 0
+  #dd$value[dd$value>maxv] = maxv
+  
+  p = ggplot(dd)+
+    geom_sf(aes(fill=value, color = wasImp), lwd = 0.75)+
+    geom_sf(data = worldmap)+
+    coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
+    theme_light()+
+    scale_color_manual(values=c("transparent","red"))+
+    #scale_fill_viridis(limits=c(0,maxv))+ #
+    scale_fill_viridis()+
+    ggtitle(yy)+
+    theme(axis.text.x = element_text(angle = 90))+
+    labs(fill="abundance")+
+    facet_wrap(.~model,nrow = 1)
+  p
+  
+  ggsave("figures/index/maps_all_2016.png",p,width=12,height=4)
+  
+  
+  ####################
+  #2020
+  ####################
+  yy=2021
+  
+  data.imp.baseline = doImputation(data,sds,doNoFilter,traintestBaseline,years=yy)
+  data.imp.baseline$model = "Baseline"
+  data.imp.lmm1 = doImputation(data,sds,doNoFilter,traintestLMER1,years=yy)
+  data.imp.lmm1$model = "LMM-noFE"
+  data.imp.lmm2 = doImputation(data,sds,doNoFilter,traintestLMER2,years=yy)
+  data.imp.lmm2$model = "LMM-noSD"
+  data.imp.lmm3 = doImputation(data,sds,doNoFilter,traintestLMER3,years=yy)
+  data.imp.lmm3$model = "LMM-full"
+  data.imp.gam = doImputation(data,sds,doNoFilter,trainTestGAM2,years=yy)
+  data.imp.gam$model = "GAM"
+  data.imp.xgb1 = doImputation(data,sds,doTargetEncoding.TrainTest.vy.vr,traintestXGB,years=yy)
+  data.imp.xgb1$model = "XGB-noSDInteraction"
+  data.imp.xgb2 = doImputation(data,sds,doTargetEncoding.TrainTest.vsy.vr,traintestXGB,years=yy)
+  data.imp.xgb2$model = "XGB-SDInteraction"
+  
+  
+  data.imp = rbind(data.imp.baseline,data.imp.lmm1,data.imp.lmm2,data.imp.lmm3,
+                   data.imp.gam,data.imp.xgb1,data.imp.xgb2)
+  
+  
+  worldmap <- ne_countries(scale = 'medium', type = 'map_units',
+                           returnclass = 'sf')
+  
+  
+  dd.coord = data.imp[data.imp$Year==yy,]
+  
+  dd.coord = dd.coord %>% group_by(RECT,SOUTH,WEST,Year,Sub_Div,model) %>% 
+    summarise(value=sum(value),wasImp=all(wasImp))
+  
+  #dd.coord = dd.coord[dd.coord$variable == age,]
+  
+  #merge geometry
+  ices <- st_read("data/ICES_rectangles/ICES_Statistical_Rectangles_Eco.shp")
+  ices.b = dplyr::filter(ices,Ecoregion=="Baltic Sea")
+  dd = merge(ices.b,dd.coord,by.x="ICESNAME",by.y="RECT")
+  
+  dd<- dd %>%
+    arrange(wasImp)
+  
+  #maxv=1500
+  #dd$value[dd$value<0] = 0
+  #dd$value[dd$value>maxv] = maxv
+  
+  p = ggplot(dd)+
+    geom_sf(aes(fill=value, color = wasImp), lwd = 0.75)+
+    geom_sf(data = worldmap)+
+    coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
+    theme_light()+
+    scale_color_manual(values=c("transparent","red"))+
+    #scale_fill_viridis(limits=c(0,maxv))+ #
+    scale_fill_viridis()+
+    ggtitle(yy)+
+    theme(axis.text.x = element_text(angle = 90))+
+    labs(fill="abundance")+
+    facet_wrap(.~model,nrow = 3)
+  p
+  
+  ggsave("figures/index/maps_all_2021.png",p,width=12,height=10)
 }
 
 
@@ -187,10 +341,10 @@ plot2016 = function(){
 
   data.imp = doImputation(data,sds,doNoFilter,trainTestGAM2,years=2016)
   
-  p = plotMap.imputed(data.imp,2016,"Age2")
+  p = plotMap.imputed(data.imp,2016,"all","GAM")
   p
   
-  ggsave("figures/index/map2016age2.png",p,width=6,height=4)
+  ggsave("figures/index/map2016_all.png",p,width=6,height=4)
 }
 
 

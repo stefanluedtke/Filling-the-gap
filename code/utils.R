@@ -96,13 +96,19 @@ plotMap = function(data,year,age){
   
 }
 
-plotMap.imputed = function(data,year,age){
+plotMap.imputed = function(data,year,age,model=""){
   
   worldmap <- ne_countries(scale = 'medium', type = 'map_units',
                            returnclass = 'sf')
   
   dd.coord = data[data$Year==year,]
-  dd.coord = dd.coord[dd.coord$variable == age,]
+  
+  if(age=="all"){
+    dd.coord = dd.coord %>% group_by(RECT,SOUTH,WEST,Year,Sub_Div) %>% 
+      summarise(value=sum(value),wasImp=all(wasImp))
+  } else{
+    dd.coord = dd.coord[dd.coord$variable == age,]
+  }
   
   #merge geometry
   ices <- st_read("data/ICES_rectangles/ICES_Statistical_Rectangles_Eco.shp")
@@ -112,16 +118,30 @@ plotMap.imputed = function(data,year,age){
   dd<- dd %>%
     arrange(wasImp)
   
-  p = ggplot(dd)+
-    geom_sf(aes(fill=value, color = wasImp), lwd = 0.75)+
-    geom_sf(data = worldmap)+
-    coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
-    theme_light()+
-    scale_color_manual(values=c("transparent","red"))+
-    scale_fill_viridis()+ #
-    ggtitle(paste0(year,", ",age))+
-    theme(axis.text.x = element_text(angle = 90))+
-    labs(fill="abundance")
+  if(age=="all"){
+    p = ggplot(dd)+
+      geom_sf(aes(fill=value, color = wasImp), lwd = 0.75)+
+      geom_sf(data = worldmap)+
+      coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
+      theme_light()+
+      scale_color_manual(values=c("transparent","red"))+
+      scale_fill_viridis()+ #
+      ggtitle(paste0(year,", ",model))+
+      theme(axis.text.x = element_text(angle = 90))+
+      labs(fill="abundance")
+  } else{
+    p = ggplot(dd)+
+      geom_sf(aes(fill=value, color = wasImp), lwd = 0.75)+
+      geom_sf(data = worldmap)+
+      coord_sf(xlim = c(12, 24), ylim = c(54, 60))+
+      theme_light()+
+      scale_color_manual(values=c("transparent","red"))+
+      scale_fill_viridis()+ #
+      ggtitle(paste0(year,", ",age,", ",model))+
+      theme(axis.text.x = element_text(angle = 90))+
+      labs(fill="abundance")
+  }
+  
   p
   
 }
