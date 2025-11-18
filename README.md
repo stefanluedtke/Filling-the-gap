@@ -4,7 +4,9 @@ Scripts and datasets to reproduce the results of our manuscript on data imputati
 
 ## Data
 
-The WGBIFS BIAS and BASS survey data on rectangle resolution that is needed to run the code is not contained in this repository. Please contact Stefanie Haase <stefanie.haase@thuenen.de> to request the data. 
+The annual abundance data for herring and sprat from the BIAS and BASS, which are required to run the code, were downloaded from the internal ICES WGBIFS database in May 2023 and have not been updated since. If you have any questions regarding the data, please contact Stefanie Haase (stefanie.haase@thuenen.de). For further details on the surveys, please refer to the latest report: https://www.ices.dk/community/groups/pages/WGBIFS.aspx.
+
+Vielefrevf)
 
 ## Running the scripts
 

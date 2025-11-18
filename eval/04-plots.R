@@ -168,7 +168,7 @@ plotIndices = function(){
 
 plotInterpolationExamples = function(){
   
-  #plot all models for two years: 2016 (much missing) and ...
+  #plot all models for two years: 2016 (much missing) and 2021
   
   type = "bass"
   data = loadData(type)
@@ -246,14 +246,16 @@ plotInterpolationExamples = function(){
     ggtitle(yy)+
     theme(axis.text.x = element_text(angle = 90))+
     labs(fill="abundance")+
-    facet_wrap(.~model,nrow = 1)
+    facet_wrap(.~model,nrow = 1)+
+    guides(color = "none")
   p
+  
   
   ggsave("figures/index/maps_all_2016.png",p,width=12,height=4)
   
   
   ####################
-  #2020
+  #2021
   ####################
   yy=2021
   
@@ -311,7 +313,9 @@ plotInterpolationExamples = function(){
     ggtitle(yy)+
     theme(axis.text.x = element_text(angle = 90))+
     labs(fill="abundance")+
-    facet_wrap(.~model,nrow = 3)
+    facet_wrap(.~model,nrow = 3)+
+    guides(color = "none")
+  
   p
   
   ggsave("figures/index/maps_all_2021.png",p,width=12,height=10)
